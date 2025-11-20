@@ -4,6 +4,7 @@
 from flask import Flask, render_template, request
 import sys
 import json
+import os
 
 # Add both sport folders to Python path
 sys.path.append('./football')
@@ -13,7 +14,6 @@ app = Flask(__name__)
 
 # Try to import football predictor
 try:
-    import os
     from football import predictor as football_predictor
     
     # Load football data files
@@ -34,7 +34,6 @@ except Exception as e:
 
 # Try to import basketball predictor
 try:
-    import os
     from basketball import predictor as basketball_predictor
     
     # Load basketball data files
@@ -161,12 +160,14 @@ def basketball():
 
 if __name__ == "__main__":
     print("=" * 80)
-    print("SPORTS ANALYTICS HUB")
+    print("🏆 SPORTS ANALYTICS HUB")
     print("=" * 80)
     print(f"Football Predictor: {'✓ Available' if FOOTBALL_AVAILABLE else '✗ Not Available'}")
     print(f"Basketball Predictor: {'✓ Available' if BASKETBALL_AVAILABLE else '✗ Not Available'}")
     print("=" * 80)
-    print("Starting server at http://localhost:5000")
+    print("🌐 Starting server")
     print("=" * 80)
     
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Get port from environment variable (for deployment) or use 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
