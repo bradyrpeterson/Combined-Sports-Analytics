@@ -1,0 +1,258 @@
+#Import needed packages
+import pandas as pd
+import numpy as np
+import cfbd #College Football Data API
+import requests #For pulling data from CFBD
+import json #For handling json files
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+api_key = os.getenv("API_KEY")
+#Using configuration suggested by CFBD turn the games into a dataset
+configuration = cfbd.Configuration(
+    access_token = api_key)
+
+with cfbd.ApiClient(configuration) as api_client:
+    api_instance = cfbd.GamesApi(api_client)
+    games = api_instance.get_games(year=2025)
+
+#Using requests pull all the statistical data from the data set
+stats_url = "https://api.collegefootballdata.com/stats/season?year=2025"
+headers = {"Authorization": f"Bearer {api_key}"} 
+#Convert the API response into a json then a dataframe for easy use
+stats_response = requests.get(stats_url, headers=headers)
+stats_data = stats_response.json()
+stats_df = pd.DataFrame(stats_data)
+
+#Reshape stats to have one row per team
+stats_wide = stats_df.pivot(index="team", columns="statName", values="statValue").reset_index()
+
+# Create efficiency stats using the dataset
+stats_wide["yardsPerPlay_off"] = stats_wide["totalYards"] / (stats_wide["rushingAttempts"] + stats_wide["passAttempts"])
+stats_wide["yardsPerPlay_def"] = stats_wide["totalYardsOpponent"] / (stats_wide["rushingAttemptsOpponent"] + stats_wide["passAttemptsOpponent"])
+stats_wide["thirdDownPct"] = stats_wide["thirdDownConversions"] / stats_wide["thirdDowns"]
+stats_wide["turnoverMargin"] = stats_wide["turnoversOpponent"] - stats_wide["turnovers"]
+
+# Keep only the stats/columns that I plan on using
+useful = ["team", "yardsPerPlay_off", "yardsPerPlay_def", "thirdDownPct", "turnoverMargin"]
+stats_clean = stats_wide[useful]
+#Each game is turned into a dictionary then into a dataframe 
+df = pd.DataFrame([g.to_dict() for g in games])
+#In case I need to see what columns the game dataset has to offer
+#print("Columns available:", df.columns.tolist())
+#Only keep the columns that matter
+need_cols = ["season","week","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference"]
+df=df[need_cols].copy()
+#Only care about games where one of the teams was FBS
+# Load list of FBS teams
+with open("football/fbs_teams_2025.json", "r") as f:
+    fbs_teams = json.load(f)
+
+#Only keep games if it involved an FBS team
+df = df[df["homeTeam"].isin(fbs_teams) | df["awayTeam"].isin(fbs_teams)]
+
+df=df.reset_index(drop=True)
+#Need to make an upcoming data frame as well as a completed data frame
+completed = df.dropna(subset=["homePoints","awayPoints"]).reset_index(drop=True)
+upcoming=df[df["homePoints"].isna() | df["awayPoints"].isna()].reset_index(drop=True)
+next_week = int(upcoming["week"].dropna().sort_values().unique()[0])
+
+#define what margin is
+#sort the dataframe to have a line of home and away teams
+df=completed
+df["margin"] = df["homePoints"] - df["awayPoints"]
+#Build the design matrix
+teams = sorted(set(df["homeTeam"]).union(df["awayTeam"]))
+#Home teams get a +1 value and -1 is for away
+#This setup allows for the regression to assign each team a numeric rating
+X = pd.DataFrame(0, index=np.arange(len(df)), columns=teams)
+for i, row in df.iterrows():
+    X.loc[i, row["homeTeam"]] = 1    # +1 for home team
+    X.loc[i, row["awayTeam"]] = -1   # -1 for away team
+
+#Add home field column
+X["home_field"] = 1
+
+#Time to fit the margin
+#The regressions finds coefficients that best fit the margins
+#Don't worry about an intercept cause we have home field
+y = df["margin"]
+
+#Create the linear regression based on the margins
+#Essentially finds a set of ratings that makes the predicted scores as close 
+#as possible to what actually happened
+model = LinearRegression(fit_intercept=False)
+#Fit a model that predicts y (point margin) as a linear
+#combination of the columns in X
+model.fit(X, y)
+
+#Ensure home field is counted for in the team ratings
+#Every team gets a numeric rating
+#home_field isolates the average value that being at home bears
+#Substrating the mean centers the ratings at 0 so the average team has that rating
+coefs = pd.Series(model.coef_, index=X.columns)
+home_field = coefs["home_field"]
+ratings = coefs.drop("home_field")
+#Make the average team=0
+ratings -= ratings.mean()   
+
+
+
+#Merge together both team stats and ratings
+ratings_df = pd.DataFrame({"team": ratings.index, "rating": ratings.values})
+merged = ratings_df.merge(stats_clean, on="team", how="left")
+
+# In case I want to print the home field advantage calculation
+#print("Estimated home-field advantage (points):", round(home_field, 2))
+#In case I went to print the best teams strictly based on my powerindex
+#print(ratings.sort_values(ascending=False).head(5))
+
+#Prediciton function
+def predict_game(home, away):
+    rating_diff = ratings[home] - ratings[away]
+    #Pull the home and away team stats and compare them
+    h_stats = stats_clean.loc[stats_clean["team"] == home].iloc[0]
+    a_stats = stats_clean.loc[stats_clean["team"] == away].iloc[0]
+    
+    # Compute stat differences between the two teams
+    ypp_diff = h_stats["yardsPerPlay_off"] - a_stats["yardsPerPlay_def"]
+    third_down_diff = h_stats["thirdDownPct"] - a_stats["thirdDownPct"]
+    turnover_diff = h_stats["turnoverMargin"] - a_stats["turnoverMargin"]
+
+    #Different weights of each
+    w_rating=0.7
+    w_ypp=0.1
+    w_third=0.05
+    w_turnover=0.15
+    margin=(w_rating*rating_diff+(w_ypp*ypp_diff*10)+(w_third*third_down_diff*20)+(w_turnover*turnover_diff)+home_field)
+
+    #Calculate probabiliy based on the idea that a team favored by 7 
+    #has a 75% chance to win 
+    prob = 1 / (1 + np.exp(-margin / 7))  # rough logistic
+    return margin, prob
+
+def get_betting_lines(week, year=2025):
+    """
+    Fetch betting lines from the CFBD API for a specific week
+    Returns a dictionary mapping (home, away) tuples to DraftKings spreads
+    """
+    lines_url = f"https://api.collegefootballdata.com/lines?year={year}&week={week}&seasonType=regular"
+    
+    try:
+        response = requests.get(lines_url, headers=headers)
+        response.raise_for_status()
+        lines_data = response.json()
+        
+        betting_lines = {}
+        
+        for game in lines_data:
+            home = game.get("homeTeam")
+            away = game.get("awayTeam")
+            lines = game.get("lines", [])
+            
+            if not home or not away or not lines:
+                continue
+            
+            # Look specifically for DraftKings line
+            draftkings_spread = None
+            for line in lines:
+                if line.get("provider") == "DraftKings":
+                    draftkings_spread = line.get("spread")
+                    break
+            
+            if draftkings_spread is not None:
+                betting_lines[(home, away)] = draftkings_spread
+        
+        return betting_lines
+    
+    except Exception as e:
+        print(f"Error fetching betting lines: {e}")
+        return {}
+
+def calculate_edge_highlight(model_margin, betting_spread):
+    """
+    Calculate what highlight class to use based on difference between
+    model prediction and betting spread
+    
+    model_margin: positive = home favored, negative = away favored
+    betting_spread: positive = away favored, negative = home favored
+    
+    Returns: 'edge-big' (5+ point difference) or 'edge-medium' (3-5 point difference) or None
+    """
+    # Convert betting spread to match our model's convention
+    # If betting spread is +7, that means home is favored by 7
+    # If betting spread is -7, that means away is favored by 7
+    # We need to flip it to match our model's convention (positive = home favored)
+    betting_margin = -betting_spread
+    
+    # Calculate the difference
+    difference = abs(model_margin - betting_margin)
+    
+    if difference >= 5:
+        return 'edge-big'
+    elif difference >= 3:
+        return 'edge-medium'
+    else:
+        return None
+
+def get_upcoming_predictions(week=None):
+    # Use the upcoming games dataset (no scores yet)
+    games_to_predict = upcoming.copy()
+
+    if week is not None:
+        games_to_predict = games_to_predict[games_to_predict["week"].astype(int) == int(week)]
+
+    # Fetch betting lines for this week
+    betting_lines = get_betting_lines(week if week else next_week)
+
+    predictions = []
+    for _, game in games_to_predict.iterrows():
+        home, away = game["homeTeam"], game["awayTeam"]
+
+        #skip games where data
+        #Helps avoid faulty data by skipping the games or stats are missing
+        if home not in ratings.index or away not in ratings.index:
+            continue
+        if home not in stats_clean["team"].values or away not in stats_clean["team"].values:
+            continue
+
+        try:
+            margin, prob = predict_game(home, away)
+            winner = home if margin > 0 else away
+            
+            # Get betting line for this game
+            betting_spread = betting_lines.get((home, away), None)
+            
+            # Calculate edge highlight
+            edge_class = None
+            spread_diff = None
+            if betting_spread is not None:
+                edge_class = calculate_edge_highlight(margin, betting_spread)
+                # Calculate the actual difference for display
+                betting_margin = -betting_spread
+                spread_diff = round(margin - betting_margin, 1)
+            
+            predictions.append({
+                "home": home,
+                "away": away,
+                "predicted_winner": winner,
+                "margin": round(abs(margin), 2),
+                "prob": round(prob * 100, 1) if margin > 0 else round((1 - prob) * 100, 1),
+                "betting_spread": betting_spread,
+                "edge_class": edge_class,
+                "spread_diff": spread_diff
+            })
+        except Exception as e:
+            print(f"Error predicting {home} vs {away}: {e}")
+            continue
+
+    return pd.DataFrame(predictions)
+
+
+
+# How to print if I wasn't using the app
+#m, p = predict_game("Florida State", "Ohio State")
+#print(f"\nPredicted margin {m:.2f}, win probability {p*100:.1f}%")

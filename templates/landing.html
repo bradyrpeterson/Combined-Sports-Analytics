@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sports Analytics Hub</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="landing-container">
+    <div class="header">
+      <h1 class="main-title">Sports Analytics Hub</h1>
+      <p class="subtitle">Machine Learning Models for College Sports Predictions. Create mock matchups or look at real precitions.</p>
+    </div>
+
+    <div class="sports-grid">
+      <!-- Football Card -->
+      <div class="sport-card {% if not football_available %}disabled{% endif %}">
+        <div class="sport-icon">🏈</div>
+        <h2>Football Predictor</h2>
+        <p>Predict college football game outcomes using linear regression and advanced efficiency metrics. Compare predictions to DraftKings betting lines.</p>
+        <div class="features">
+          <div class="feature">1. Personalized predidctor for mock games</div>
+          <div class="feature">2. Weekly predictions for all FBS teams</div>
+          <div class="feature">3. DraftKings edge detection</div>
+        </div>
+        {% if football_available %}
+        <a href="{{ url_for('football') }}" class="btn">Launch Football App →</a>
+        {% else %}
+        <div class="btn disabled">Not Available</div>
+        {% endif %}
+      </div>
+
+      <!-- Basketball Card -->
+      <div class="sport-card {% if not basketball_available %}disabled{% endif %}">
+        <div class="sport-icon">🏀</div>
+        <h2>Basketball Predictor</h2>
+        <p>Analyze college basketball matchups with data-driven predictions. Track performance and identify value opportunities.</p>
+        <div class="features">
+          <div class="feature">1. Personalized predidctor for mock games</div>
+          <div class="feature">2. Daily predictions for all D-1 teams</div>
+          <div class="feature">3. Confidence meter for all real games</div>
+        </div>
+        {% if basketball_available %}
+        <a href="{{ url_for('basketball') }}" class="btn">Launch Basketball App →</a>
+        {% else %}
+        <div class="btn disabled">Not Available</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h3>About This Project</h3>
+      <p>
+        These predictors use <strong>linear regression</strong> to calculate team power ratings from actual game results,
+        then combine them with efficiency statistics to predict outcomes. Each model is trained on the current season's
+        data and updated weekly. Information is sourced from CFBD and CBBD APIs.
+      </p>
+      <div class="tech-stack">
+        <span class="tech-badge">Python</span>
+        <span class="tech-badge">Flask</span>
+        <span class="tech-badge">Scikit-learn</span>
+        <span class="tech-badge">Pandas</span>
+        <span class="tech-badge">Linear Regression</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Built by Brady Peterson | <a href="https://github.com/bradyrpeterson" target="_blank">View on GitHub</a></p>
+    </div>
+  </div>
+</body>
+</html>
