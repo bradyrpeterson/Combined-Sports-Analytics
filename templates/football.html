@@ -14,7 +14,6 @@
     <div class="nav-container">
       <a href="{{ url_for('landing') }}" class="nav-logo">🏆 Sports Analytics Hub</a>
       <div class="nav-links">
-        <a href="{{ url_for('landing') }}" class="nav-link">🏠 Home</a>
         <a href="{{ url_for('football') }}" class="nav-link active">🏈 Football</a>
         <a href="{{ url_for('basketball') }}" class="nav-link">🏀 Basketball</a>
       </div>
@@ -28,7 +27,7 @@
     <div class="form-section">
       <form method="POST">
         <div class="form-group">
-          <label for="home_team">🏠 Home Team:</label>
+          <label for="home_team">Home Team:</label>
           <select name="home_team" id="home_team" required>
             <option value="" disabled selected>Select home team...</option>
             {% for team in teams %}
@@ -38,7 +37,7 @@
         </div>
 
         <div class="form-group">
-          <label for="away_team">✈️ Away Team:</label>
+          <label for="away_team">Away Team:</label>
           <select name="away_team" id="away_team" required>
             <option value="" disabled selected>Select away team...</option>
             {% for team in teams %}
