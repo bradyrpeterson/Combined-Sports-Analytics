@@ -519,4 +519,33 @@ button:hover {
     flex-direction: column;
     gap: 20px;
   }
+  
+}
+
+/* ============================================
+   CONFERENCE FILTER STYLES
+   ============================================ */
+.conference-filter {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.conference-filter select {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.conference-filter select:hover {
+  border-color: #007bff;
+}
+
+.conference-filter select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }

@@ -135,10 +135,7 @@ def predict_game(home, away):
     return margin, prob
 
 def get_betting_lines(week, year=2025):
-    """
-    Fetch betting lines from the CFBD API for a specific week
-    Returns a dictionary mapping (home, away) tuples to DraftKings spreads
-    """
+   #Get draftkings specific betting lines for the week
     lines_url = f"https://api.collegefootballdata.com/lines?year={year}&week={week}&seasonType=regular"
     
     try:
@@ -173,15 +170,6 @@ def get_betting_lines(week, year=2025):
         return {}
 
 def calculate_edge_highlight(model_margin, betting_spread):
-    """
-    Calculate what highlight class to use based on difference between
-    model prediction and betting spread
-    
-    model_margin: positive = home favored, negative = away favored
-    betting_spread: positive = away favored, negative = home favored
-    
-    Returns: 'edge-big' (5+ point difference) or 'edge-medium' (3-5 point difference) or None
-    """
     # Convert betting spread to match our model's convention
     # If betting spread is +7, that means home is favored by 7
     # If betting spread is -7, that means away is favored by 7
@@ -198,13 +186,19 @@ def calculate_edge_highlight(model_margin, betting_spread):
     else:
         return None
 
-def get_upcoming_predictions(week=None):
+def get_upcoming_predictions(week=None,conference=None):
     # Use the upcoming games dataset (no scores yet)
     games_to_predict = upcoming.copy()
 
     if week is not None:
         games_to_predict = games_to_predict[games_to_predict["week"].astype(int) == int(week)]
 
+    #Filter by conferences
+    if conference is not None:
+        games_to_predict = games_to_predict[
+            (games_to_predict["homeConference"] == conference) | 
+            (games_to_predict["awayConference"] == conference)
+        ]
     # Fetch betting lines for this week
     betting_lines = get_betting_lines(week if week else next_week)
 

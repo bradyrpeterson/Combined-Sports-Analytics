@@ -24,9 +24,11 @@ try:
         football_logos = json.load(f)
     with open(os.path.join(football_dir, "team_color.json"), "r") as f:
         football_colors = json.load(f)
+    with open(os.path.join(football_dir, "conferences.json"), "r") as f:
+        football_conferences = json.load(f)
     FOOTBALL_AVAILABLE = True
 except Exception as e:
-    print(f"⚠️  Football predictor not available: {e}")
+    print(f"Football predictor not available: {e}")
     FOOTBALL_AVAILABLE = False
     football_teams = []
     football_logos = {}
@@ -41,8 +43,10 @@ try:
     with open(os.path.join(basketball_dir, "d1_teams_2025.json"), "r") as f:
         basketball_teams = json.load(f)
     BASKETBALL_AVAILABLE = True
+    with open(os.path.join(basketball_dir, "conferences.json"), "r") as f:
+        basketball_conferences = json.load(f)
 except Exception as e:
-    print(f"⚠️  Basketball predictor not available: {e}")
+    print(f"Basketball predictor not available: {e}")
     BASKETBALL_AVAILABLE = False
     basketball_teams = []
 
@@ -59,7 +63,7 @@ def landing():
 
 @app.route("/football", methods=["GET", "POST"])
 def football():
-    """Football predictor page"""
+   #Football predictor page
     if not FOOTBALL_AVAILABLE:
         return "Football predictor not available. Check football/predictor.py", 404
     
@@ -70,11 +74,13 @@ def football():
     away_logo = None
     winner_color = None
     upcoming_predictions = None
-    
+    selected_conference = request.args.get("conference", "All")
     # Get upcoming predictions
     try:
         upcoming_predictions = football_predictor.get_upcoming_predictions(
-            week=football_predictor.next_week
+            week=football_predictor.next_week,
+            conference=selected_conference if 
+            selected_conference != 'All' else None
         )
     except Exception as e:
         print(f"Error getting football predictions: {e}")
@@ -106,13 +112,15 @@ def football():
         away_logo=away_logo,
         winner_color=winner_color,
         predictions=upcoming_predictions,
-        week=football_predictor.next_week if FOOTBALL_AVAILABLE else None
+        week=football_predictor.next_week if FOOTBALL_AVAILABLE else None,
+        conferences=football_conferences,
+        selected_conference=selected_conference
     )
 
 
 @app.route("/basketball", methods=["GET", "POST"])
 def basketball():
-    """Basketball predictor page"""
+    # Basketball predictor page
     if not BASKETBALL_AVAILABLE:
         return "Basketball predictor not available. Check basketball/predictor.py", 404
     
@@ -120,10 +128,13 @@ def basketball():
     home_team = None
     away_team = None
     upcoming_predictions = None
+    selected_conference = request.args.get("conference", "All")
     
     # Get upcoming predictions (today's games)
     try:
-        upcoming_predictions = basketball_predictor.get_upcoming_predictions()
+        upcoming_predictions = basketball_predictor.get_upcoming_predictions(
+            conference=selected_conference if selected_conference != 'All' else None
+        )
     except Exception as e:
         print(f"Error getting basketball predictions: {e}")
         upcoming_predictions = []
@@ -154,7 +165,9 @@ def basketball():
         result=result,
         home_team=home_team,
         away_team=away_team,
-        predictions=upcoming_predictions
+        predictions=upcoming_predictions,
+        conferences=basketball_conferences,
+        selected_conference=selected_conference
     )
 
 

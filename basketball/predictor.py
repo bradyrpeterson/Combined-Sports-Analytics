@@ -144,7 +144,7 @@ def predict_game(home, away):
     return margin, prob
 
 from datetime import datetime, timezone
-def get_upcoming_predictions():
+def get_upcoming_predictions(conference=None):
     # Use the upcoming games dataset (no scores yet)
 
     #Only care about games that are happening today in EST
@@ -164,6 +164,12 @@ def get_upcoming_predictions():
         games_to_predict["startDate_EST"].dt.date == today_est
     ]
 
+    #Filter by conferences
+    if conference is not None:
+        games_to_predict = games_to_predict[
+            (games_to_predict["homeConference"] == conference) | 
+            (games_to_predict["awayConference"] == conference)
+        ] 
 
     predictions = []
     for _, game in games_to_predict.iterrows():

@@ -75,7 +75,21 @@
       <h2>{{ result }}</h2>
     </div>
     {% endif %}
-
+    <div class = "conference-filter">
+      <form method="GET" action="{{ url_for('football') }}" style="display: 
+      inline;">
+        <label for="conference" style="font-weight: 600; margin-right: 10 px;">
+          Filter by Conference:
+        </label>
+        <select name="conference" id="conference" onchange="this.form.submit()" styles="padding: 8px 15px; border-radius: 8px; 
+        border: 2px solid #ddd;">
+          <option value="All" {% if selected_conference == 'All' %}selected{% endif %}>All Conferences</option>
+          {% for conf in conferences %}
+          <option value="{{ conf }}" {% if selected_conference == conf %}selected{% endif %}>{{ conf }}</option>
+          {% endfor %}
+        </select>
+        </form>
+    </div>
     {% if predictions is not none and not predictions.empty %}
     <div class="predictions-box">
       <h2>📅 Week {{ week }} Predictions</h2>
