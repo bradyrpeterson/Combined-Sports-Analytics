@@ -5,6 +5,7 @@ from flask import Flask, render_template, request
 import sys
 import json
 import os
+import pandas as pd
 
 # Add both sport folders to Python path
 sys.path.append('./football')
@@ -42,13 +43,14 @@ try:
     basketball_dir = os.path.join(os.path.dirname(__file__), 'basketball')
     with open(os.path.join(basketball_dir, "d1_teams_2025.json"), "r") as f:
         basketball_teams = json.load(f)
-    BASKETBALL_AVAILABLE = True
     with open(os.path.join(basketball_dir, "conferences.json"), "r") as f:
         basketball_conferences = json.load(f)
+    BASKETBALL_AVAILABLE = True
 except Exception as e:
     print(f"Basketball predictor not available: {e}")
     BASKETBALL_AVAILABLE = False
     basketball_teams = []
+    basketball_conferences = []
 
 
 @app.route("/")
@@ -75,15 +77,16 @@ def football():
     winner_color = None
     upcoming_predictions = None
     selected_conference = request.args.get("conference", "All")
+    
     # Get upcoming predictions
     try:
         upcoming_predictions = football_predictor.get_upcoming_predictions(
             week=football_predictor.next_week,
-            conference=selected_conference if 
-            selected_conference != 'All' else None
+            conference=selected_conference if selected_conference != 'All' else None
         )
     except Exception as e:
         print(f"Error getting football predictions: {e}")
+        upcoming_predictions = pd.DataFrame()  # Empty DataFrame instead of None
     
     if request.method == "POST":
         home_team = request.form["home_team"]
@@ -127,17 +130,28 @@ def basketball():
     result = None
     home_team = None
     away_team = None
-    upcoming_predictions = None
+    upcoming_predictions = pd.DataFrame()  # Initialize as empty DataFrame
     selected_conference = request.args.get("conference", "All")
     
     # Get upcoming predictions (today's games)
     try:
-        upcoming_predictions = basketball_predictor.get_upcoming_predictions(
+        predictions_result = basketball_predictor.get_upcoming_predictions(
             conference=selected_conference if selected_conference != 'All' else None
         )
+        
+        # Ensure it's a DataFrame
+        if isinstance(predictions_result, pd.DataFrame):
+            upcoming_predictions = predictions_result
+        elif isinstance(predictions_result, list):
+            upcoming_predictions = pd.DataFrame(predictions_result)
+        else:
+            upcoming_predictions = pd.DataFrame()
+            
     except Exception as e:
         print(f"Error getting basketball predictions: {e}")
-        upcoming_predictions = []
+        import traceback
+        traceback.print_exc()
+        upcoming_predictions = pd.DataFrame()
     
     if request.method == "POST":
         home_team = request.form["home_team"]

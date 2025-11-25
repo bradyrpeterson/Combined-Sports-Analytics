@@ -55,26 +55,33 @@
       <h2>{{ result }}</h2>
     </div>
     {% endif %}
-    <div class = "conference-filter">
-      <form method="GET" action="{{ url_for('basketball') }}" style="display: 
-      inline;">
-        <label for="conference" style="font-weight: 600; margin-right: 10 px;">
+
+    <!-- Conference Filter -->
+    <div class="conference-filter">
+      <form method="GET" action="{{ url_for('basketball') }}" style="display: inline;">
+        <label for="conference" style="font-weight: 600; margin-right: 10px;">
           Filter by Conference:
         </label>
-        <select name="conference" id="conference" onchange="this.form.submit()" styles="padding: 8px 15px; border-radius: 8px; 
-        border: 2px solid #ddd;">
-          <option value="All" {% if selected_conference == 'All' %}selected{% endif %}>All Conferences</option>
+        <select name="conference" id="conference" onchange="this.form.submit()" 
+                style="padding: 8px 15px; border-radius: 8px; border: 2px solid #ddd;">
+          <option value="All" {% if selected_conference == 'All' %}selected{% endif %}>
+            All Conferences
+          </option>
           {% for conf in conferences %}
-          <option value="{{ conf }}" {% if selected_conference == conf %}selected{% endif %}>{{ conf }}</option>
+          <option value="{{ conf }}" {% if selected_conference == conf %}selected{% endif %}>
+            {{ conf }}
+          </option>
           {% endfor %}
         </select>
-        </form>
+      </form>
     </div>
-    {% if predictions %}
+
+    <!-- Today's Predictions -->
+    {% if predictions is not none and not predictions.empty %}
     <div class="predictions-box">
-      <h2>🗓️ Today's Predictions</h2>
+      <h2>🗓️ Today's Predictions (EST)</h2>
       <p style="color: #666; font-size: 0.95em; margin-bottom: 10px;">
-        Predictions for games scheduled today (EST)
+       Games highlighted show value opportunities where the model differs significantly from ESPN BET
       </p>
       <table class="predictions-table">
         <thead>
@@ -83,37 +90,70 @@
             <th>Away Team</th>
             <th>Win Probability</th>
             <th>Predicted Margin</th>
+            <th>ESPN BET Spread</th>
+            <th>Edge</th>
           </tr>
         </thead>
         <tbody>
-          {% for p in predictions %}
-          <tr>
-            <td class="{% if p.predicted_winner == p.home %}winner{% endif %}">
-              {{ p.home }}
+          {% for _, row in predictions.iterrows() %}
+          <tr class="{% if row.edge_class == 'edge-big' %}edge-big{% elif row.edge_class == 'edge-medium' %}edge-medium{% endif %}">
+            <td class="{% if row.predicted_winner == row.home %}winner{% endif %}">
+              {{ row.home }}
             </td>
-            <td class="{% if p.predicted_winner == p.away %}winner{% endif %}">
-              {{ p.away }}
+            <td class="{% if row.predicted_winner == row.away %}winner{% endif %}">
+              {{ row.away }}
             </td>
-            <td class="{% if p.prob >= 70 %}confidence-high{% elif p.prob >= 55 %}confidence-medium{% else %}confidence-low{% endif %}">
-              {{ p.prob }}%
+            <td class="{% if row.prob >= 70 %}confidence-high{% elif row.prob >= 55 %}confidence-medium{% else %}confidence-low{% endif %}">
+              {{ row.prob }}%
             </td>
             <td>
-              {% if p.predicted_winner == p.home %}
-                {{ p.home }} -{{ p.margin }}
+              {% if row.predicted_winner == row.home %}
+                {{ row.home }} -{{ row.margin }}
               {% else %}
-                {{ p.away }} -{{ p.margin }}
+                {{ row.away }} -{{ row.margin }}
+              {% endif %}
+            </td>
+            <td>
+              {# Check for both None and NaN #}
+              {% if row.betting_spread is not none and row.betting_spread == row.betting_spread %}
+                {% if row.betting_spread > 0 %}
+                  {{ row.away }} -{{ row.betting_spread|abs|round(1) }}
+                {% elif row.betting_spread < 0 %}
+                  {{ row.home }} -{{ row.betting_spread|abs|round(1) }}
+                {% endif %}
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+            <td>
+              {# Check for both None and NaN #}
+              {% if row.spread_diff is not none and row.spread_diff == row.spread_diff %}
+                {% if row.spread_diff > 0 %}
+                  +{{ row.spread_diff }}
+                {% else %}
+                  {{ row.spread_diff }}
+                {% endif %}
+              {% else %}
+                -
               {% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+      
       <div style="margin-top: 20px; font-size: 0.9em; color: #666;">
         <p><strong>Legend:</strong></p>
         <p style="margin: 5px 0;">
           <span class="confidence-high">● High Confidence (70%+)</span> | 
           <span class="confidence-medium">● Medium Confidence (55-69%)</span> | 
           <span class="confidence-low">● Low Confidence (&lt;55%)</span>
+        </p>
+        <p style="margin: 5px 0;">
+          <span style="background: #fff3cd; padding: 2px 8px; border-radius: 3px;">🟡 Yellow: 5-10 point edge</span> | 
+          <span style="background: #d4edda; padding: 2px 8px; border-radius: 3px;">🟢 Green: 10+ point edge</span>
+        <p style="margin: 5px 0;">
+          <strong>Note:</strong> "Edge" shows how much the model differs from the ESPN BET line. Positive edge = your model is more bullish on the team than ESPN BET.
         </p>
       </div>
     </div>
