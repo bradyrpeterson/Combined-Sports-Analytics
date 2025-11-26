@@ -1,7 +1,7 @@
 # app.py
 # Unified Flask app for Football and Basketball predictors
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 import sys
 import json
 import os
@@ -184,17 +184,51 @@ def basketball():
         selected_conference=selected_conference
     )
 
+#Create flask route for football rankings
+@app.route("/football/rankings")
+def football_rankings():
+    if not FOOTBALL_AVAILABLE:
+        return "Football predictor not available", 404
+    
+    # Access the FBS_rankings you already created in predictor.py
+    rankings_df = football_predictor.FBS_rankings.copy()
+    rankings_df['Rank'] = range(1, len(rankings_df) + 1)
+    rankings_df['rating'] = rankings_df['rating'].round(2)
+    
+    return render_template(
+        "rankings.html",
+        sport="Football",
+        rankings=rankings_df,
+        back_url=url_for('football')
+    )
 
+#Create flask route for basketball rankings
+@app.route("/basketball/rankings")
+def basketball_rankings():
+    if not BASKETBALL_AVAILABLE:
+        return "Basketball predictor not available", 404
+    
+    # Access the D1_rankings you already created in predictor.py
+    rankings_df = basketball_predictor.D1_rankings.copy()
+    rankings_df['Rank'] = range(1, len(rankings_df) + 1)
+    rankings_df['rating'] = rankings_df['rating'].round(2)
+    
+    return render_template(
+        "rankings.html",
+        sport="Basketball",
+        rankings=rankings_df,
+        back_url=url_for('basketball')
+    )
 if __name__ == "__main__":
     print("=" * 80)
-    print("🏆 SPORTS ANALYTICS HUB")
+    print("SPORTS ANALYTICS HUB")
     print("=" * 80)
     print(f"Football Predictor: {'✓ Available' if FOOTBALL_AVAILABLE else '✗ Not Available'}")
     print(f"Basketball Predictor: {'✓ Available' if BASKETBALL_AVAILABLE else '✗ Not Available'}")
     print("=" * 80)
-    print("🌐 Starting server")
+    print("Starting server")
     print("=" * 80)
     
-    # Get port from environment variable (for deployment) or use 5000
+    #Get port from environment variable (for deployment) or use 5000
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)

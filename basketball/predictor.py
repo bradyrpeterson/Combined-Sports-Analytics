@@ -107,6 +107,18 @@ ratings -= ratings.mean()
 # Sort ratings index for clean dropdown in Flask
 ratings = ratings.sort_index()
 
+
+# Create D1-only rankings
+D1_rankings = pd.DataFrame({
+    'team': ratings.index,
+    'rating': ratings.values
+})
+
+# Filter for only FBS teams
+D1_rankings = D1_rankings[D1_rankings['team'].isin(d1_teams)].reset_index(drop=True)
+
+# Sort by rating descending
+D1_rankings = D1_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
 #Prediction function - EXACTLY LIKE FOOTBALL
 def predict_game(home, away):
     rating_diff = ratings[home] - ratings[away]

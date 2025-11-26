@@ -100,7 +100,6 @@ ratings = coefs.drop("home_field")
 ratings -= ratings.mean()   
 
 
-
 #Merge together both team stats and ratings
 ratings_df = pd.DataFrame({"team": ratings.index, "rating": ratings.values})
 merged = ratings_df.merge(stats_clean, on="team", how="left")
@@ -108,7 +107,17 @@ merged = ratings_df.merge(stats_clean, on="team", how="left")
 # In case I want to print the home field advantage calculation
 #print("Estimated home-field advantage (points):", round(home_field, 2))
 #In case I went to print the best teams strictly based on my powerindex
-#print(ratings.sort_values(ascending=False).head(5))
+# Create FBS-only rankings
+FBS_rankings = pd.DataFrame({
+    'team': ratings.index,
+    'rating': ratings.values
+})
+
+# Filter for only FBS teams
+FBS_rankings = FBS_rankings[FBS_rankings['team'].isin(fbs_teams)]
+
+# Sort by rating descending
+FBS_rankings = FBS_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
 
 #Prediciton function
 def predict_game(home, away):
