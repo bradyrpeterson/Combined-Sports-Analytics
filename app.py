@@ -76,6 +76,7 @@ def football():
     away_logo = None
     winner_color = None
     upcoming_predictions = None
+    neutral_site = False
     selected_conference = request.args.get("conference", "All")
     
     # Get upcoming predictions
@@ -91,13 +92,16 @@ def football():
     if request.method == "POST":
         home_team = request.form["home_team"]
         away_team = request.form["away_team"]
+        neutral_site = request.form.get("neutral_site") == "on"
         
         try:
-            margin, prob = football_predictor.predict_game(home_team, away_team)
+            margin, prob = football_predictor.predict_game(home_team, away_team, neutral_site=neutral_site)
             winner = home_team if margin > 0 else away_team
             winner_prob = prob if margin > 0 else 1 - prob
             
-            result = f"{winner} has a {winner_prob*100:.2f}% chance to win and is predicted to win by {abs(margin):.2f}"
+            #Add neutral site info for the result
+            site_info = "(neutral site)" if neutral_site else ""
+            result = f"{winner} has a {winner_prob*100:.2f}% chance to win and is predicted to win by {abs(margin):.2f}{site_info}"
             
             winner_color = football_colors.get(winner)
             home_logo = football_logos.get(home_team)
@@ -117,7 +121,8 @@ def football():
         predictions=upcoming_predictions,
         week=football_predictor.next_week if FOOTBALL_AVAILABLE else None,
         conferences=football_conferences,
-        selected_conference=selected_conference
+        selected_conference=selected_conference,
+        neutral_site=neutral_site
     )
 
 
@@ -130,7 +135,8 @@ def basketball():
     result = None
     home_team = None
     away_team = None
-    upcoming_predictions = pd.DataFrame()  # Initialize as empty DataFrame
+    upcoming_predictions = None
+    neutral_site = False
     selected_conference = request.args.get("conference", "All")
     
     # Get upcoming predictions (today's games)
@@ -156,17 +162,19 @@ def basketball():
     if request.method == "POST":
         home_team = request.form["home_team"]
         away_team = request.form["away_team"]
+        neutral_site = request.form.get("neutral_site") == "on"
         
         # Check if teams have stats
         if home_team not in basketball_predictor.ratings.index or away_team not in basketball_predictor.ratings.index:
             result = f"Stats not available for matchup: {home_team} vs {away_team}"
         else:
             try:
-                margin, prob = basketball_predictor.predict_game(home_team, away_team)
+                margin, prob = basketball_predictor.predict_game(home_team, away_team, neutral_site=neutral_site)
                 winner = home_team if margin > 0 else away_team
                 winner_prob = prob if margin > 0 else 1 - prob
                 
-                result = f"{winner} has a {winner_prob*100:.2f}% chance to win and is predicted to win by {abs(margin):.2f} points."
+                site_info = "(neutral site)" if neutral_site else ""
+                result = f"{winner} has a {winner_prob*100:.2f}% chance to win and is predicted to win by {abs(margin):.2f} points.{site_info}"
             except Exception as e:
                 result = f"Error making prediction: {e}"
     
@@ -181,7 +189,8 @@ def basketball():
         away_team=away_team,
         predictions=upcoming_predictions,
         conferences=basketball_conferences,
-        selected_conference=selected_conference
+        selected_conference=selected_conference,
+        neutral_site=neutral_site
     )
 
 #Create flask route for football rankings

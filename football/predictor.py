@@ -120,7 +120,7 @@ FBS_rankings = FBS_rankings[FBS_rankings['team'].isin(fbs_teams)]
 FBS_rankings = FBS_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
 
 #Prediciton function
-def predict_game(home, away):
+def predict_game(home, away, neutral_site=False):
     rating_diff = ratings[home] - ratings[away]
     #Pull the home and away team stats and compare them
     h_stats = stats_clean.loc[stats_clean["team"] == home].iloc[0]
@@ -131,12 +131,15 @@ def predict_game(home, away):
     third_down_diff = h_stats["thirdDownPct"] - a_stats["thirdDownPct"]
     turnover_diff = h_stats["turnoverMargin"] - a_stats["turnoverMargin"]
 
+    #Whether or not home field advantage is applied
+    home_advantage = 0 if neutral_site else home_field
+
     #Different weights of each
     w_rating=0.7
     w_ypp=0.1
     w_third=0.05
     w_turnover=0.15
-    margin=(w_rating*rating_diff+(w_ypp*ypp_diff*10)+(w_third*third_down_diff*20)+(w_turnover*turnover_diff)+home_field)
+    margin=(w_rating*rating_diff+(w_ypp*ypp_diff*10)+(w_third*third_down_diff*20)+(w_turnover*turnover_diff)+home_advantage)
 
     #Calculate probabiliy based on the idea that a team favored by 7 
     #has a 75% chance to win 

@@ -46,7 +46,19 @@
             {% endfor %}
           </select>
         </div>
-
+        <div class="form-group" style="margin: 20px 0;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span style="font-weight: 600;">Neutral Site Game</span>
+            <input 
+            type="checkbox" 
+            name="neutral_site" 
+            id="switch"
+            {% if neutral_site %}checked{% endif %}
+            class="checkbox"
+          >
+        <label for="switch" class="toggle"></label>
+        </div>
+      </div class="button">
         <button type="submit">🎯 Predict Game</button>
       </form>
     </div>

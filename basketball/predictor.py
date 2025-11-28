@@ -120,7 +120,7 @@ D1_rankings = D1_rankings[D1_rankings['team'].isin(d1_teams)].reset_index(drop=T
 # Sort by rating descending
 D1_rankings = D1_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
 #Prediction function - EXACTLY LIKE FOOTBALL
-def predict_game(home, away):
+def predict_game(home, away, neutral_site=False):
     rating_diff = ratings[home] - ratings[away]
     #Pull the home and away team stats and compare them
     h_stats = stats_clean.loc[stats_clean["team"] == home].iloc[0]
@@ -131,12 +131,14 @@ def predict_game(home, away):
     deff_diff = h_stats["def_eff"] - a_stats["def_eff"]
     turnover_diff = h_stats["tov_rate"] - a_stats["tov_rate"]
 
+    #Whether or not home court advntage is applied
+    home_advantage = 0 if neutral_site else home_court
     #Different weights of each
     w_rating=0.7
     w_oeff=0.125
     w_deff=0.125
     w_tov=0.05
-    margin=(w_rating*rating_diff+(w_oeff*oeff_diff)+(w_deff*deff_diff)+(w_tov*turnover_diff)+home_court)
+    margin=(w_rating*rating_diff+(w_oeff*oeff_diff)+(w_deff*deff_diff)+(w_tov*turnover_diff)+home_advantage)
 
     #Calculate probability
     prob = 1 / (1 + np.exp(-margin / 5))  # rough logistic
