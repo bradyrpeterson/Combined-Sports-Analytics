@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - BP's Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 550px;
+      width: 100%;
+      padding: 60px 50px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #4dabf7 0%, #339af0 100%);
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-circle {
+      width: 120px;
+      height: 120px;
+      background: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 48px;
+      font-weight: 800;
+      color: white;
+      border: 4px solid #4dabf7;
+    }
+
+    h1 {
+      font-size: 2.2em;
+      color: #000;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 1.1em;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1em;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #4dabf7;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .login-btn:hover {
+      background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-btn:disabled {
+      background: #999;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      background: #ffe0e0;
+      color: #cc0000;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.95em;
+      display: none;
+      border-left: 4px solid #cc0000;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading-spinner {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .loading-spinner.show {
+      display: block;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4dabf7;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .info-text {
+      text-align: center;
+      color: #999;
+      font-size: 0.85em;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 40px 30px;
+      }
+
+      h1 {
+        font-size: 1.75em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo-section">
+      <div class="logo-circle">P. P</div>
+      <h1>PetersonPredicts</h1>
+      <p class="subtitle">Sign in to access predictions. Contact bradyrpeterson2@gmail.com for a login</p>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          required 
+          placeholder="Enter your email"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          required 
+          placeholder="Enter your password"
+        >
+      </div>
+
+      <button type="submit" id="login-btn" class="login-btn">
+        Sign In
+      </button>
+    </form>
+
+    <div class="loading-spinner" id="loading-spinner">
+      <div class="spinner"></div>
+      <p style="margin-top: 15px; color: #666;">Signing in...</p>
+    </div>
+  </div>
+
+  <!-- Firebase v9+ modular SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+    // YOUR CORRECT Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJdIg9Dn_ruSLGlX7xl0IJ23T_35wnf1Q",
+      authDomain: "petersonpredicts.firebaseapp.com",
+      projectId: "petersonpredicts",
+      storageBucket: "petersonpredicts.firebasestorage.app",
+      messagingSenderId: "116317678992",
+      appId: "1:116317678992:web:92ebf1d62af567f05b5715"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    console.log("✅ Firebase initialized");
+
+    // Check if already logged in
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log("✅ User already logged in:", user.email);
+        const token = await user.getIdToken();
+        
+        // Create session on backend
+        fetch('/auth-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            token: token
+          })
+        }).then((response) => {
+          if (response.ok) {
+            window.location.href = '/';
+          }
+        });
+      }
+    });
+
+    // Handle form submission
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('error-message');
+      const loginBtn = document.getElementById('login-btn');
+      const spinner = document.getElementById('loading-spinner');
+      
+      console.log("Attempting login for:", email);
+      
+      // Hide error, show spinner
+      errorDiv.classList.remove('show');
+      loginBtn.disabled = true;
+      spinner.classList.add('show');
+      
+      try {
+        // Sign in with Firebase
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        const token = await user.getIdToken();
+        
+        console.log("Firebase login successful:", user.email);
+        
+        // Create session on backend
+        const response = await fetch('/auth-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            token: token
+          })
+        });
+        
+        if (response.ok) {
+          console.log("✅ Session created, redirecting...");
+          window.location.href = '/';
+        } else {
+          throw new Error('Session creation failed');
+        }
+        
+      } catch (error) {
+        console.error("Login error:", error);
+        
+        spinner.classList.remove('show');
+        loginBtn.disabled = false;
+        
+        let errorMessage = 'Login failed. Please try again.';
+        
+        if (error.code === 'auth/invalid-email') {
+          errorMessage = 'Invalid email address.';
+        } else if (error.code === 'auth/user-not-found') {
+          errorMessage = 'No account found with this email.';
+        } else if (error.code === 'auth/wrong-password') {
+          errorMessage = 'Incorrect password.';
+        } else if (error.code === 'auth/invalid-credential') {
+          errorMessage = 'Invalid email or password.';
+        } else if (error.code === 'auth/too-many-requests') {
+          errorMessage = 'Too many failed attempts. Please try again later.';
+        }
+        
+        errorDiv.textContent = errorMessage;
+        errorDiv.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>

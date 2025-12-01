@@ -1,17 +1,66 @@
 # app.py
 # Unified Flask app for Football and Basketball predictors
 
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for, session, redirect
 import sys
 import json
 import os
 import pandas as pd
+from functools import wraps
 
 # Add both sport folders to Python path
 sys.path.append('./football')
 sys.path.append('./basketball')
 
 app = Flask(__name__)
+
+app.secret_key = os.environ.get('SECRET_KEY',"asdfaDFdf23423@#@!$!@#@!$#@!$#@!$#@!")
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route("/login")
+def login():
+    """Login page"""
+    return render_template("login.html")
+
+VALID_USERS = {
+    "brady": "password123",
+    "test": "test123"
+}
+
+@app.route("/simple-login", methods=["POST"])
+def simple_login():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    
+    if username in VALID_USERS and VALID_USERS[username] == password:
+        session['user'] = {'username': username, 'email': f'{username}@local.test'}
+        return redirect('/')
+    return redirect('/login')
+
+@app.route("/auth-callback",methods=["POST"])
+def auth_callback():
+    """Handle authentication callback"""
+    data = request.get_json()
+    if data and 'uid' in data and 'email' in data:
+        session['user'] = {
+            'uid': data['uid'],
+            'email': data['email']
+        }
+        return {'success':True},200
+    return {'success':False},401
+
+@app.route("/logout")
+def logout():
+    """Logout user"""
+    session.clear()
+    return render_template("logout.html")
 
 # Try to import football predictor
 try:
@@ -52,10 +101,12 @@ except Exception as e:
     basketball_teams = []
     basketball_conferences = []
 
-
+@login_required
 @app.route("/")
 def landing():
     """Landing page - choose your sport"""
+    if 'user' not in session:
+        return redirect('/login')
     return render_template(
         "landing.html",
         football_available=FOOTBALL_AVAILABLE,
@@ -64,6 +115,7 @@ def landing():
 
 
 @app.route("/football", methods=["GET", "POST"])
+@login_required
 def football():
    #Football predictor page
     if not FOOTBALL_AVAILABLE:
@@ -127,6 +179,7 @@ def football():
 
 
 @app.route("/basketball", methods=["GET", "POST"])
+@login_required
 def basketball():
     # Basketball predictor page
     if not BASKETBALL_AVAILABLE:
@@ -195,6 +248,7 @@ def basketball():
 
 #Create flask route for football rankings
 @app.route("/football/rankings")
+@login_required
 def football_rankings():
     if not FOOTBALL_AVAILABLE:
         return "Football predictor not available", 404
@@ -213,6 +267,7 @@ def football_rankings():
 
 #Create flask route for basketball rankings
 @app.route("/basketball/rankings")
+@login_required
 def basketball_rankings():
     if not BASKETBALL_AVAILABLE:
         return "Basketball predictor not available", 404
