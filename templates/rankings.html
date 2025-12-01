@@ -12,11 +12,12 @@
   <!-- Navigation Bar -->
   <nav class="sports-nav">
     <div class="nav-container">
-      <a href="{{ url_for('landing') }}" class="nav-logo">🏆 Sports Analytics Hub</a>
+      <a href="{{ url_for('landing') }}" class="nav-logo">Home</a>
       <div class="nav-links">
-        <a href="{{ url_for('football') }}" class="nav-link">🏈 Football</a>
-        <a href="{{ url_for('basketball') }}" class="nav-link">🏀 Basketball</a>
-        <a href="{{ url_for ('logout') }}" class="nav-link">🚪 Logout</a>
+        <a href="{{ url_for('football') }}" class="nav-link">Football</a>
+        <a href="{{ url_for('basketball') }}" class="nav-link">Basketball</a>
+        <a href="{{ url_for ('logout') }}" class="nav-link">Logout</a>
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
       </div>
     </div>
   </nav>
