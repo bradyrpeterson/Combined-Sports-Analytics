@@ -118,7 +118,7 @@ body {
 .sport-card:hover {
   transform: translateY(-10px);
   box-shadow: 0 15px 50px rgb(0, 0, 0);
-  border-color: #00eeff;
+  border-color: #339af0;;
 }
 
 .sport-card.disabled {
@@ -166,7 +166,7 @@ body {
 
 .btn {
   display: block;
-  background: rgb(0, 0, 0);
+  background: #339af0;;
   color: rgb(255, 255, 255);
   padding: 15px 35px;
   border-radius: 10px;
@@ -180,7 +180,6 @@ body {
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 241, 233, 0.85);
 }
 
 .btn.disabled {
@@ -315,18 +314,18 @@ select {
 }
 
 select:hover {
-  border-color: #00eeff;
+  border-color: #4dabf7;
 }
 
 select:focus {
   outline: none;
-  border-color: #00eeff;
+  border-color: #4dabf7;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 button {
   margin-top: 20px;
-  background: #000000;
+  background: #339af0;
   border: none;
   color: white;
   padding: 14px 40px;
@@ -340,7 +339,6 @@ button {
 
 button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
 }
 
 .result-section {
@@ -481,12 +479,12 @@ button:hover {
 }
 
 .conference-filter select:hover {
-  border-color: #00eeff;
+  border-color: #4dabf7;
 }
 
 .conference-filter select:focus {
   outline: none;
-  border-color: #00eeff;
+  border-color: #4dabf7;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
@@ -522,7 +520,7 @@ button:hover {
 }
 
 .checkbox:checked + .toggle {
-  background-color: #00fff2;
+  background-color: #4dabf7;
 }
 
 .checkbox:checked + .toggle::after {
@@ -600,7 +598,7 @@ button:hover {
 }
 
 .record-card {
-  background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+  background: #339af0;
   padding: 24px 20px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(77, 171, 247, 0.2);
