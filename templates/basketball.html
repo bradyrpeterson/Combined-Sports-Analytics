@@ -114,9 +114,15 @@
           <tr class="{% if row.edge_class == 'edge-big' %}edge-big{% elif row.edge_class == 'edge-medium' %}edge-medium{% endif %}">
             <td class="{% if row.predicted_winner == row.home %}winner{% endif %}">
               {{ row.home }}
+              {% if row.neutral_site %}
+                <span style="color: black; font-size: 0.8em;">(N)</span>
+              {% endif %}
             </td>
             <td class="{% if row.predicted_winner == row.away %}winner{% endif %}">
               {{ row.away }}
+              {% if row.neutral_site %}
+                <span style="color: black; font-size: 0.8em;">(N)</span>
+              {% endif %}
             </td>
             <td class="{% if row.prob >= 70 %}confidence-high{% elif row.prob >= 55 %}confidence-medium{% else %}confidence-low{% endif %}">
               {{ row.prob }}%
@@ -166,7 +172,8 @@
         </p>
         <p style="margin: 5px 0;">
           <span style="background: #fff3cd; padding: 2px 8px; border-radius: 3px; color: black">Yellow: 5-10 point edge</span> | 
-          <span style="background: #d4edda; padding: 2px 8px; border-radius: 3px; color: black">Green: 10+ point edge</span>
+          <span style="background: #d4edda; padding: 2px 8px; border-radius: 3px; color: black">Green: 10+ point edge</span> | 
+          <span style="color:black">(N) indicates a neutral site</span>
         <p style="margin: 5px 0; color: black">
           <strong>Note:</strong> "Edge" shows how much the model differs from the ESPN BET line. Positive edge = the model is more bullish on the team than ESPN BET.
         </p>

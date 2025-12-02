@@ -25,7 +25,7 @@ games_url = "https://api.collegebasketballdata.com/games?season=2026"
 games_response = requests.get(games_url, headers=headers)
 games_data = games_response.json()
 games_df = pd.DataFrame(games_data)
-needed_cols = ["season","status","startDate","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference"]
+needed_cols = ["season","status","startDate","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
 games_df=games_df[needed_cols].copy()
 
 #Only care about games where one of the teams was D1
@@ -254,6 +254,7 @@ def get_upcoming_predictions(conference=None):
     for _, game in games_to_predict.iterrows():
         home, away = game["homeTeam"], game["awayTeam"]
 
+        is_neutral = game.get("neutralSite",False)
         # Skip games where data is missing
         if home not in ratings.index or away not in ratings.index:
             continue
@@ -261,7 +262,7 @@ def get_upcoming_predictions(conference=None):
             continue
 
         try:
-            margin, prob = predict_game(home, away)
+            margin, prob = predict_game(home, away, neutral_site=is_neutral)
             winner = home if margin > 0 else away
             
             # Get betting line for this game 
@@ -284,11 +285,12 @@ def get_upcoming_predictions(conference=None):
                 "prob": round(prob * 100, 1) if margin > 0 else round((1 - prob) * 100, 1),
                 "betting_spread": betting_spread,
                 "edge_class": edge_class,
-                "spread_diff": spread_diff
+                "spread_diff": spread_diff,
+                "neutral_site": is_neutral
             })
         except Exception as e:
             print(f"Error predicting {home} vs {away}: {e}")
             continue
 
-    # Return DataFrame - EXACTLY LIKE FOOTBALL
+    # Return DataFrame
     return pd.DataFrame(predictions)

@@ -44,7 +44,7 @@ df = pd.DataFrame([g.to_dict() for g in games])
 #In case I need to see what columns the game dataset has to offer
 #print("Columns available:", df.columns.tolist())
 #Only keep the columns that matter
-need_cols = ["season","week","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference"]
+need_cols = ["season","week","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
 df=df[need_cols].copy()
 #Only care about games where one of the teams was FBS
 # Load list of FBS teams
@@ -218,6 +218,8 @@ def get_upcoming_predictions(week=None,conference=None):
     for _, game in games_to_predict.iterrows():
         home, away = game["homeTeam"], game["awayTeam"]
 
+        is_neutral = game.get("neutralSite",False)
+
         #skip games where data
         #Helps avoid faulty data by skipping the games or stats are missing
         if home not in ratings.index or away not in ratings.index:
@@ -226,7 +228,7 @@ def get_upcoming_predictions(week=None,conference=None):
             continue
 
         try:
-            margin, prob = predict_game(home, away)
+            margin, prob = predict_game(home, away, neutral_site=is_neutral)
             winner = home if margin > 0 else away
             
             # Get betting line for this game
@@ -249,7 +251,8 @@ def get_upcoming_predictions(week=None,conference=None):
                 "prob": round(prob * 100, 1) if margin > 0 else round((1 - prob) * 100, 1),
                 "betting_spread": betting_spread,
                 "edge_class": edge_class,
-                "spread_diff": spread_diff
+                "spread_diff": spread_diff,
+                "neutral_site": is_neutral
             })
         except Exception as e:
             print(f"Error predicting {home} vs {away}: {e}")
