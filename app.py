@@ -7,7 +7,8 @@ import json
 import os
 import pandas as pd
 from functools import wraps
-
+import firebase_admin
+from firebase_admin import credentials, firestore, auth
 # Add both sport folders to Python path
 sys.path.append('./football')
 sys.path.append('./basketball')
@@ -16,6 +17,16 @@ app = Flask(__name__)
 
 app.secret_key = os.environ.get('SECRET_KEY',"asdfaDFdf23423@#@!$!@#@!$#@!$#@!$#@!")
 
+#Initialize Firebase Admin
+if not firebase_admin._apps:
+    if os.path.exists('firebase_credentials.json'):
+        cred = credentials.Certificate('firebase_credentials.json')
+    else:
+        service_account_info = json.loads(os.getenv('FIREBASE_SERVICE_ACCOUNT'))
+    
+    firebase_admin.initialize_app(cred)
+#Initialize my firestore DB
+db = firestore.client()
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -27,7 +38,10 @@ def login_required(f):
 @app.route("/login")
 def login():
     """Login page"""
-    return render_template("login.html")
+    doc = db.collection('season_records').document('current').get()
+    records = doc.to_dict()
+
+    return render_template("login.html", records=records)
 
 VALID_USERS = {
     "brady": "password123",

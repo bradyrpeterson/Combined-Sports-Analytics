@@ -29,14 +29,14 @@
       <div class="records-grid">
         <div class="record-card">
           <div class="record-label">Against The Spread</div>
-          <div class="record-stat">128-81</div>
-          <div class="record-percentage">61.2%</div>
+          <div class="record-stat">{{ records.football_ats_wins }}-{{ records.football_ats_losses }}</div>
+          <div class="record-percentage">{{ records.football_ats_percentage }}%</div>
         </div>
         
         <div class="record-card">
           <div class="record-label">Moneyline</div>
-          <div class="record-stat">156-53</div>
-          <div class="record-percentage">74.6%</div>
+          <div class="record-stat">{{ records.football_ml_wins }}-{{ records.football_ml_losses }}</div>
+          <div class="record-percentage">{{ records.football_ml_percentage }}%</div>
         </div>
       </div>
 
