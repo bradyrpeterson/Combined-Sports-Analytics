@@ -107,7 +107,11 @@
     </div>
     {% if predictions is not none and not predictions.empty %}
     <div class="predictions-box">
-      <h2>📅 Week {{ week }} Predictions</h2>
+      {% if week>16 %}
+        <h2>📅 Postseason Predictions</h2>
+      {% else %}
+        <h2>📅 Week {{ week }} Predictions</h2>
+      {% endif %}
       <p style="color: #666; font-size: 0.95em; margin-bottom: 10px;">
         Games highlighted show value opportunities where the model differs significantly from DraftKings
       </p>

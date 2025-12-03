@@ -183,15 +183,15 @@ def get_betting_lines(season=2026):
             if not home or not away or not lines:
                 continue
             
-            # Look for ESPN BET spreads
-            espn_spread = None
+            # Look for dk spreads
+            dk_spread = None
             for line in lines:
-                if line.get("provider") == "ESPN BET":
-                    espn_spread = line.get("spread")
+                if line.get("provider") == "Draft Kings":
+                    dk_spread = line.get("spread")
                     break
             
-            if espn_spread is not None:
-                betting_lines[(home, away)] = espn_spread
+            if dk_spread is not None:
+                betting_lines[(home, away)] = dk_spread
         
         return betting_lines
     
@@ -247,7 +247,7 @@ def get_upcoming_predictions(conference=None):
             (games_to_predict["awayConference"] == conference)
         ]
     
-    # Fetch betting lines for today from ESPN BET
+    # Fetch betting lines for today
     betting_lines = get_betting_lines(season=2026)
 
     predictions = []

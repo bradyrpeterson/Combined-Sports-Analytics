@@ -44,7 +44,7 @@ df = pd.DataFrame([g.to_dict() for g in games])
 #In case I need to see what columns the game dataset has to offer
 #print("Columns available:", df.columns.tolist())
 #Only keep the columns that matter
-need_cols = ["season","week","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
+need_cols = ["season","seasonType","week","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
 df=df[need_cols].copy()
 #Only care about games where one of the teams was FBS
 # Load list of FBS teams
@@ -57,8 +57,14 @@ df = df[df["homeTeam"].isin(fbs_teams) | df["awayTeam"].isin(fbs_teams)]
 df=df.reset_index(drop=True)
 #Need to make an upcoming data frame as well as a completed data frame
 completed = df.dropna(subset=["homePoints","awayPoints"]).reset_index(drop=True)
+
 upcoming=df[df["homePoints"].isna() | df["awayPoints"].isna()].reset_index(drop=True)
-next_week = int(upcoming["week"].dropna().sort_values().unique()[0])
+regular_upcoming = upcoming[upcoming["seasonType"]=="regular"]
+
+if len(regular_upcoming)>0:
+    next_week = int(regular_upcoming["week"].dropna().sort_values().unique()[0])
+else:
+    next_week = 17
 
 #define what margin is
 #sort the dataframe to have a line of home and away teams
@@ -203,8 +209,12 @@ def get_upcoming_predictions(week=None,conference=None):
     games_to_predict = upcoming.copy()
 
     if week is not None:
-        games_to_predict = games_to_predict[games_to_predict["week"].astype(int) == int(week)]
-
+        if int(week)>16:
+            games_to_predict = games_to_predict[games_to_predict["seasonType"]== "postseason"]
+        else: 
+            games_to_predict = games_to_predict[(games_to_predict["week"].astype(int) == int(week))&(games_to_predict["seasonType"]=="regular")]
+    else:
+        games_to_predict =games_to_predict[games_to_predict["seasonType"]=="regular"]
     #Filter by conferences
     if conference is not None:
         games_to_predict = games_to_predict[
