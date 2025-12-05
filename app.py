@@ -1,7 +1,7 @@
 # app.py
 # Unified Flask app for Football and Basketball predictors
 
-from flask import Flask, render_template, request, url_for, session, redirect
+from flask import Flask, render_template, request, url_for, session, redirect, jsonify
 import sys
 import json
 import os
@@ -9,6 +9,7 @@ import pandas as pd
 from functools import wraps
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
+from datetime import datetime
 # Add both sport folders to Python path
 sys.path.append('./football')
 sys.path.append('./basketball')
@@ -30,10 +31,57 @@ db = firestore.client()
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
-            return redirect('/login')
-        return f(*args, **kwargs)
+        try:
+            if 'user_id' not in session:
+                return redirect('/login')
+            
+            # Check user status
+            user_ref = db.collection("users").document(session["user_id"])
+            user_doc = user_ref.get()
+
+            if not user_doc.exists:
+                return redirect(url_for('login'))
+            
+            user_data = user_doc.to_dict()
+            status = user_data.get("status", "pending")
+            expires = user_data.get("subscription_expires")
+            
+            # Check if active subscription has expired
+            if status == "active" and expires:
+                # Make datetime timezone-aware for comparison
+                from datetime import timezone
+                now = datetime.now(timezone.utc)
+                
+                # Handle different datetime types
+                if isinstance(expires, datetime):
+                    # If expires doesn't have timezone, make it UTC
+                    if expires.tzinfo is None:
+                        expires = expires.replace(tzinfo=timezone.utc)
+                    
+                    if now > expires:
+                        user_ref.update({"status": "expired"})
+                        return redirect(url_for("payment_pending"))
+                
+                # Handle Firestore timestamp
+                elif hasattr(expires, 'seconds'):
+                    expire_datetime = datetime.fromtimestamp(expires.seconds, tz=timezone.utc)
+                    if now > expire_datetime:
+                        user_ref.update({"status": "expired"})
+                        return redirect(url_for("payment_pending"))
+            
+            # Check if subscription is pending or expired
+            if status in ["pending", "expired"]:
+                return redirect(url_for("payment_pending"))
+            
+            return f(*args, **kwargs)
+            
+        except Exception as e:
+            print(f"Error in login_required: {e}")
+            import traceback
+            traceback.print_exc()
+            return redirect(url_for('login'))
     return decorated_function
+
 
 @app.route("/login")
 def login():
@@ -62,13 +110,26 @@ def simple_login():
 def auth_callback():
     """Handle authentication callback"""
     data = request.get_json()
-    if data and 'uid' in data and 'email' in data:
-        session['user'] = {
-            'uid': data['uid'],
-            'email': data['email']
-        }
-        return {'success':True},200
-    return {'success':False},401
+    uid = data.get("uid")
+    email = data.get("email")
+
+    #Check if the user exists in my database
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    if not user_doc.exists:
+        user_ref.set({
+            "email": email,
+            "status":"pending",
+            "created_at": datetime.now(),
+            "approved_at":None,
+            "subscription_expires":None
+        })
+    
+    session["user_id"] = uid
+    session["email"] = email
+    
+    return jsonify({'success':True}),200
+    
 
 @app.route("/logout")
 def logout():
@@ -115,18 +176,23 @@ except Exception as e:
     basketball_teams = []
     basketball_conferences = []
 
-@login_required
 @app.route("/")
+@login_required
 def landing():
     """Landing page - choose your sport"""
-    if 'user' not in session:
+    if 'user_id' not in session:
         return redirect('/login')
     return render_template(
         "landing.html",
         football_available=FOOTBALL_AVAILABLE,
         basketball_available=BASKETBALL_AVAILABLE
     )
-
+@app.route("/payment-pending")
+def payment_pending():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    return render_template('payment_pending.html', email=session.get('email'))
 
 @app.route("/football", methods=["GET", "POST"])
 @login_required

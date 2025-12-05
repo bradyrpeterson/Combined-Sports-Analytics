@@ -186,7 +186,7 @@ def get_betting_lines(season=2026):
             # Look for dk spreads
             dk_spread = None
             for line in lines:
-                if line.get("provider") == "Draft Kings":
+                if line.get("provider") == "Draft Kings" or "Bovada":
                     dk_spread = line.get("spread")
                     break
             
