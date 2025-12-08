@@ -125,6 +125,76 @@ FBS_rankings = FBS_rankings[FBS_rankings['team'].isin(fbs_teams)]
 # Sort by rating descending
 FBS_rankings = FBS_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
 
+def train_prediction_model():
+    """
+    Train ML model to learn optimal weights from historical data
+    This runs once when predictor loads
+    """
+    
+    features = []
+    targets = []
+    
+    for _, game in completed.iterrows():
+        home = game['homeTeam']
+        away = game['awayTeam']
+        margin = game['homePoints'] - game['awayPoints']
+        neutral = game.get('neutralSite', False)
+        
+        # Skip if missing data
+        if home not in ratings.index or away not in ratings.index:
+            continue
+        if home not in stats_clean['team'].values or away not in stats_clean['team'].values:
+            continue
+        
+        # Get features
+        h_stats = stats_clean[stats_clean['team'] == home].iloc[0]
+        a_stats = stats_clean[stats_clean['team'] == away].iloc[0]
+        
+        rating_diff = ratings[home] - ratings[away]
+        ypp_diff = h_stats['yardsPerPlay_off'] - a_stats['yardsPerPlay_def']
+        third_diff = h_stats['thirdDownPct'] - a_stats['thirdDownPct']
+        to_diff = h_stats['turnoverMargin'] - a_stats['turnoverMargin']
+        hc = 0 if neutral else 1
+        
+        # Skip if NaN
+        if pd.isna([rating_diff, ypp_diff, third_diff, to_diff]).any():
+            continue
+        
+        feature_vector = [
+            rating_diff,
+            ypp_diff,
+            third_diff,
+            to_diff,
+            hc,
+            ratings[home],
+            ratings[away],
+            h_stats['yardsPerPlay_off'],
+            a_stats['yardsPerPlay_off'],
+            h_stats['yardsPerPlay_def'],
+            a_stats['yardsPerPlay_def']
+        ]
+        
+        features.append(feature_vector)
+        targets.append(margin)
+    
+    X = np.array(features)
+    y = np.array(targets)
+    
+    # Remove any NaN rows (safety check)
+    nan_mask = np.isnan(X).any(axis=1)
+    if nan_mask.sum() > 0:
+        X = X[~nan_mask]
+        y = y[~nan_mask]
+    
+    # Train model
+    ml_model = LinearRegression()
+    ml_model.fit(X, y)
+    
+    return ml_model
+
+# Train the prediction model when predictor loads
+prediction_model = train_prediction_model()
+
 #Prediciton function
 def predict_game(home, away, neutral_site=False):
     rating_diff = ratings[home] - ratings[away]
@@ -138,15 +208,30 @@ def predict_game(home, away, neutral_site=False):
     turnover_diff = h_stats["turnoverMargin"] - a_stats["turnoverMargin"]
 
     #Whether or not home field advantage is applied
-    home_advantage = 0 if neutral_site else home_field
+    home_advantage = 0 if neutral_site else 1
 
     #Different weights of each
-    w_rating=0.7
-    w_ypp=0.1
-    w_third=0.05
-    w_turnover=0.15
-    margin=(w_rating*rating_diff+(w_ypp*ypp_diff*10)+(w_third*third_down_diff*20)+(w_turnover*turnover_diff)+home_advantage)
-
+    #w_rating=0.7
+    #_ypp=0.1
+    #w_third=0.05
+    #w_turnover=0.15
+    #margin=(w_rating*rating_diff+(w_ypp*ypp_diff*10)+(w_third*third_down_diff*20)+(w_turnover*turnover_diff)+home_advantage)
+    # Built feature vector
+    features = np.array([[
+        rating_diff,
+        ypp_diff,
+        third_down_diff,
+        turnover_diff,
+        home_advantage,
+        ratings[home],
+        ratings[away],
+        h_stats['yardsPerPlay_off'],
+        a_stats['yardsPerPlay_off'],
+        h_stats['yardsPerPlay_def'],
+        a_stats['yardsPerPlay_def']
+    ]])
+    # Predict margin using the trained model
+    margin = prediction_model.predict(features)[0]
     #Calculate probabiliy based on the idea that a team favored by 7 
     #has a 75% chance to win 
     prob = 1 / (1 + np.exp(-margin / 7))  # rough logistic
