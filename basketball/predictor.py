@@ -12,7 +12,7 @@ from datetime import datetime, timezone, timedelta
 load_dotenv()
 api_key = os.getenv("API_KEY")
 
-# Headers for API requests - EXACTLY LIKE FOOTBALL
+# Headers for API requests
 headers = {"Authorization": f"Bearer {api_key}"}
 
 #Load d1 teams
@@ -119,6 +119,77 @@ D1_rankings = D1_rankings[D1_rankings['team'].isin(d1_teams)].reset_index(drop=T
 
 # Sort by rating descending
 D1_rankings = D1_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
+
+# Trying to train the model to predict optimal weights
+def train_prediction_model():
+    """
+    Train ML model to learn optimal weights from historical data
+    This runs once when predictor loads
+    """
+    
+    features = []
+    targets = []
+    
+    for _, game in completed.iterrows():
+        home = game['homeTeam']
+        away = game['awayTeam']
+        margin = game['margin']
+        neutral = game.get('neutralSite', False)
+        
+        # Skip if missing data
+        if home not in ratings.index or away not in ratings.index:
+            continue
+        if home not in stats_clean['team'].values or away not in stats_clean['team'].values:
+            continue
+        
+        # Get features
+        h_stats = stats_clean[stats_clean['team'] == home].iloc[0]
+        a_stats = stats_clean[stats_clean['team'] == away].iloc[0]
+        
+        rating_diff = ratings[home] - ratings[away]
+        oeff_diff = h_stats['off_eff'] - a_stats['off_eff']
+        deff_diff = h_stats['def_eff'] - a_stats['def_eff']
+        tov_diff = h_stats['tov_rate'] - a_stats['tov_rate']
+        hc = 0 if neutral else 1
+        
+        # Skip if NaN
+        if pd.isna([rating_diff, oeff_diff, deff_diff, tov_diff]).any():
+            continue
+        
+        feature_vector = [
+            rating_diff,
+            oeff_diff,
+            deff_diff,
+            tov_diff,
+            hc,
+            ratings[home],
+            ratings[away],
+            h_stats['off_eff'],
+            a_stats['off_eff'],
+            h_stats['def_eff'],
+            a_stats['def_eff']
+        ]
+        
+        features.append(feature_vector)
+        targets.append(margin)
+    
+    X = np.array(features)
+    y = np.array(targets)
+    
+    # Remove any NaN rows (safety check)
+    nan_mask = np.isnan(X).any(axis=1)
+    if nan_mask.sum() > 0:
+        X = X[~nan_mask]
+        y = y[~nan_mask]
+    
+    # Train model
+    ml_model = LinearRegression()
+    ml_model.fit(X, y)
+    
+    return ml_model
+
+# Train the prediction model when predictor loads
+prediction_model = train_prediction_model()
 #Prediction function - EXACTLY LIKE FOOTBALL
 def predict_game(home, away, neutral_site=False):
     rating_diff = ratings[home] - ratings[away]
@@ -132,16 +203,30 @@ def predict_game(home, away, neutral_site=False):
     turnover_diff = h_stats["tov_rate"] - a_stats["tov_rate"]
 
     #Whether or not home court advntage is applied
-    home_advantage = 0 if neutral_site else home_court
+    home_advantage = 0 if neutral_site else 1
     #Different weights of each
-    w_rating=0.7
-    w_oeff=0.125
-    w_deff=0.125
-    w_tov=0.05
-    margin=(w_rating*rating_diff+(w_oeff*oeff_diff)+(w_deff*deff_diff)+(w_tov*turnover_diff)+home_advantage)
+    #w_rating=0.7
+    #w_oeff=0.125
+   # w_deff=0.125
+    #w_tov=0.05
+    #margin=(w_rating*rating_diff+(w_oeff*oeff_diff)+(w_deff*deff_diff)+(w_tov*turnover_diff)+home_advantage)
+    features = np.array([[
+        rating_diff,
+        oeff_diff,
+        deff_diff,
+        turnover_diff,
+        home_advantage,
+        ratings[home],
+        ratings[away],
+        h_stats['off_eff'],
+        a_stats['off_eff'],
+        h_stats['def_eff'],
+        a_stats['def_eff']
+    ]])
 
-    #Calculate probability
-    prob = 1 / (1 + np.exp(-margin / 5))  # rough logistic
+    margin=prediction_model.predict(features)[0]
+    #Calculate winprobability
+    prob = 1 / (1 + np.exp(-margin / 5))  
     return margin, prob
 
 #Function to get betting lines for today's games
