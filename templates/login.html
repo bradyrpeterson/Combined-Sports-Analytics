@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta property="og:title" content="PetersonPredicts: AI-Powered Sports Analytics">
-  <meta property="og:site_name" content="PetersonPredicts">
-  <title>PetersonPredicts: AI-Powered Sports Analytics</title>
+  <title>Login - PetersonPredicts</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
@@ -26,23 +24,9 @@
         efficiency statistics, and game results to predict college football and basketball outcomes 
         with proven accuracy.
       </p>
+      
 
-      <!-- Records Section -->
-      <div class="records-grid">
-        <div class="record-card">
-          <div class="record-label">Against The Spread</div>
-          <div class="record-stat">{{ records.football_ats_wins }}-{{ records.football_ats_losses }}</div>
-          <div class="record-percentage">{{ records.football_ats_percentage }}%</div>
-        </div>
-        
-        <div class="record-card">
-          <div class="record-label">Moneyline</div>
-          <div class="record-stat">{{ records.football_ml_wins }}-{{ records.football_ml_losses }}</div>
-          <div class="record-percentage">{{ records.football_ml_percentage }}%</div>
-        </div>
-      </div>
-
-      <div class="season-note">Since Week 9 | 2025-26 Season</div>
+      <div class="season-note">2025-26 Season</div>
     </div>
 
     <!-- Login/Signup Box Below -->
@@ -94,6 +78,8 @@
         <p class="info-text">
           Access restricted to authorized users only
         </p>
+
+          <a href="/" class="back-link">← Back to Home</a>
       </div>
 
       <!-- SIGNUP TAB -->
@@ -134,6 +120,7 @@
               minlength="6"
               placeholder="Re-enter password"
             >
+            <a href="/" class="back-link">← Back to Home</a>
           </div>
 
           <button type="submit" id="signup-btn" class="login-btn">
@@ -156,14 +143,14 @@
             <li>Access granted within 24 hours</li>
           </ol>
           <p class="payment-note">
-            Monthly subscription • Cancel anytime by not renewing
+            Monthly subscription • Cancel anytime
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Firebase v9+ modular SDK -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -180,7 +167,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Tab switching function
+    // Tab switching
     window.showTab = function(tab) {
       const loginTab = document.getElementById('login-tab');
       const signupTab = document.getElementById('signup-tab');
@@ -214,13 +201,13 @@
           })
         }).then((response) => {
           if (response.ok) {
-            window.location.href = '/';
+            window.location.href = '/football';
           }
         });
       }
     });
 
-    // LOGIN FORM HANDLER
+    // LOGIN HANDLER
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -250,7 +237,7 @@
         });
         
         if (response.ok) {
-          window.location.href = '/';
+          window.location.href = '/football';
         } else {
           throw new Error('Session creation failed');
         }
@@ -272,7 +259,7 @@
       }
     });
 
-    // SIGNUP FORM HANDLER
+    // SIGNUP HANDLER
     document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -285,7 +272,6 @@
       
       errorDiv.classList.remove('show');
       
-      // Check passwords match
       if (password !== confirmPassword) {
         errorDiv.textContent = 'Passwords do not match.';
         errorDiv.classList.add('show');
@@ -311,7 +297,6 @@
         });
         
         if (response.ok) {
-          // Redirect to payment pending page
           window.location.href = '/payment-pending';
         } else {
           throw new Error('Account creation failed');

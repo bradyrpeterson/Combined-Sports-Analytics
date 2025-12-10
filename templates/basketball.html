@@ -1,209 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>College Basketball Predictor</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Basketball Predictions | PetersonPredicts</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
-  <!-- Navigation Bar -->
-  <nav class="sports-nav">
-    <div class="nav-container">
-      <a href="{{ url_for('landing') }}" class="nav-logo">Home</a>
-      <div class="nav-links">
-        <a href="{{ url_for('football') }}" class="nav-link">Football</a>
-        <a href="{{ url_for('basketball') }}" class="nav-link active">Basketball</a>
-        <a href="{{ url_for('basketball_rankings') }}" class="nav-link">View Rankings</a>
-        <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container">
-    <h1>🏀 College Basketball Predictor</h1>
-    <p>Select two D1 teams to predict the winner based on analytics and performance metrics.</p>
-
-    <div class="form-section">
-      <form method="POST">
-        <div class="form-group">
-          <label for="home_team">Home Team:</label>
-          <select name="home_team" id="home_team" required>
-            <option value="" disabled selected>Select home team...</option>
-            {% for team in teams %}
-            <option value="{{ team }}" {% if home_team == team %}selected{% endif %}>{{ team }}</option>
-            {% endfor %}
-          </select>
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="season-info">2025-26 College Basketball Season</div>
+            <div class="top-nav-links">
+                <a href="/logout">Log Out</a>
+            </div>
         </div>
+    </div>
 
-        <div class="form-group">
-          <label for="away_team">Away Team:</label>
-          <select name="away_team" id="away_team" required>
-            <option value="" disabled selected>Select away team...</option>
-            {% for team in teams %}
-            <option value="{{ team }}" {% if away_team == team %}selected{% endif %}>{{ team }}</option>
-            {% endfor %}
-          </select>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="logo">
+                <a href="/" class="brand-name">PetersonPredicts</a>
+            </div>
+            <nav class="main-nav">
+                <a href="/">Home</a>
+                <a href="/football">Football</a>
+                <a href="/basketball" class="active">Basketball</a>
+                <a href="/rankings">Rankings</a>
+            </nav>
+            <div class="header-actions">
+                <span class="user-badge">Subscribed</span>
+            </div>
         </div>
-        <div class="form-group" style="margin: 20px 0;">
-        <div style="display: flex; align-items: center; gap: 15px;">
-          <span style="font-weight: 600;">Neutral Site Game</span>
-            <input 
-            type="checkbox" 
-            name="neutral_site" 
-            id="switch"
-            {% if neutral_site %}checked{% endif %}
-            class="checkbox"
-          >
-        <label for="switch" class="toggle"></label>
+    </header>
+
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">College Basketball Predictions</h1>
+            <p class="page-subtitle">Machine learning powered spread predictions with 56.1% ATS accuracy</p>
         </div>
-      </div class="button">
-        <button type="submit">Predict Game</button>
-      </form>
     </div>
 
-    {% if result %}
-    <div class="result-box">
-      <h2>{{ result }}</h2>
-    </div>
-    {% endif %}
+    <div class="filters-section">
+        <div class="filters-content">
+            <div class="filter-group">
+                <span class="filter-label">Conference:</span>
+                <select class="filter-select" id="conf-select" onchange="updatePredictions()">
+                    <option value="All">All Conferences</option>
+                    {% for conf in conferences %}
+                    <option value="{{ conf }}" {% if conf == selected_conference %}selected{% endif %}>{{ conf }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <!-- Conference Filter -->
-    <div class="conference-filter">
-      <form method="GET" action="{{ url_for('basketball') }}" style="display: inline;">
-        <label for="conference" style="font-weight: 600; margin-right: 10px;">
-          Filter by Conference:
-        </label>
-        <select name="conference" id="conference" onchange="this.form.submit()" 
-                style="padding: 8px 15px; border-radius: 8px; border: 2px solid #ddd;">
-          <option value="All" {% if selected_conference == 'All' %}selected{% endif %}>
-            All Conferences
-          </option>
-          {% for conf in conferences %}
-          <option value="{{ conf }}" {% if selected_conference == conf %}selected{% endif %}>
-            {{ conf }}
-          </option>
-          {% endfor %}
-        </select>
-      </form>
+            <div class="model-toggle">
+                <a href="/basketball/custom" class="btn btn-secondary">Custom Matchup</a>
+            </div>
+        </div>
     </div>
 
-    <!-- Today's Predictions -->
-    {% if predictions is not none and not predictions.empty %}
-    <div class="predictions-box">
-      <h2>🗓️ Today's Predictions (EST)</h2>
-      <p style="color: #666; font-size: 0.95em; margin-bottom: 10px;">
-       Games highlighted show value opportunities where the model differs significantly from DraftKings.
-      </p>
-      <table class="predictions-table">
-        <thead>
-          <tr>
-            <th>Home Team</th>
-            <th>Away Team</th>
-            <th>Win Probability</th>
-            <th>Predicted Margin</th>
-            <th>DraftKings Spread</th>
-            <th>Edge</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for _, row in predictions.iterrows() %}
-          <tr class="{% if row.edge_class == 'edge-big' %}edge-big{% elif row.edge_class == 'edge-medium' %}edge-medium{% endif %}">
-            <td class="{% if row.predicted_winner == row.home %}winner{% endif %}">
-              {{ row.home }}
-              {% if row.neutral_site %}
-                <span style="color: black; font-size: 0.8em;">(N)</span>
-              {% endif %}
-            </td>
-            <td class="{% if row.predicted_winner == row.away %}winner{% endif %}">
-              {{ row.away }}
-              {% if row.neutral_site %}
-                <span style="color: black; font-size: 0.8em;">(N)</span>
-              {% endif %}
-            </td>
-            <td class="{% if row.prob >= 70 %}confidence-high{% elif row.prob >= 55 %}confidence-medium{% else %}confidence-low{% endif %}">
-              {{ row.prob }}%
-            </td>
-            <td>
-              {% if row.predicted_winner == row.home %}
-                {{ row.home }} -{{ row.margin }}
-              {% else %}
-                {{ row.away }} -{{ row.margin }}
-              {% endif %}
-            </td>
-            <td>
-              {# Check for both None and NaN #}
-              {% if row.betting_spread is not none and row.betting_spread == row.betting_spread %}
-                {% if row.betting_spread > 0 %}
-                  {{ row.away }} -{{ row.betting_spread|abs|round(1) }}
-                {% elif row.betting_spread < 0 %}
-                  {{ row.home }} -{{ row.betting_spread|abs|round(1) }}
-                {% endif %}
-              {% else %}
-                N/A
-              {% endif %}
-            </td>
-            <td>
-              {# Check for both None and NaN #}
-              {% if row.spread_diff is not none and row.spread_diff == row.spread_diff %}
-                {% if row.spread_diff > 0 %}
-                  +{{ row.spread_diff }}
-                {% else %}
-                  {{ row.spread_diff }}
-                {% endif %}
-              {% else %}
-                -
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      
-      <div style="margin-top: 20px; font-size: 0.9em; color: #666;">
-        <p><strong>Legend:</strong></p>
-        <p style="margin: 5px 0;">
-          <span class="confidence-high">● High Confidence (70%+)</span> | 
-          <span class="confidence-medium">● Medium Confidence (55-69%)</span> | 
-          <span class="confidence-low">● Low Confidence (&lt;55%)</span>
-        </p>
-        <p style="margin: 5px 0;">
-          <span style="background: #fff3cd; padding: 2px 8px; border-radius: 3px; color: black">Yellow: 5-10 point edge</span> | 
-          <span style="background: #d4edda; padding: 2px 8px; border-radius: 3px; color: black">Green: 10+ point edge</span> | 
-          <span style="color:black">(N) indicates a neutral site</span>
-        <p style="margin: 5px 0; color: black">
-          <strong>Note:</strong> "Edge" shows how much the model differs from the DraftKings line. Positive edge = the model is more bullish on the team than DraftKings.
-        </p>
-      </div>
-    </div>
-    {% else %}
-    <div class="predictions-box">
-      <h2>🗓️ Today's Predictions</h2>
-      <p style="color: #666;">No games scheduled for today.</p>
-    </div>
-    {% endif %}
-  </div>
+    <div class="content">
+        {% if predictions|length == 0 %}
+        <div class="empty-state">
+            <div class="empty-icon">🏀</div>
+            <h2 class="empty-title">No Games Scheduled Today</h2>
+            <p class="empty-text">Check back tomorrow for new predictions</p>
+        </div>
+        {% else %}
+        <table class="predictions-table">
+            <thead>
+                <tr>
+                    <th>Matchup</th>
+                    <th>Model Spread</th>
+                    <th>Vegas Line</th>
+                    <th>Edge</th>
+                    <th>Win %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pred in predictions %}
+                <tr class="{% if pred.spread_diff and pred.spread_diff|abs >= 7 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-medium{% else %}edge-low{% endif %}">
+                    <td>
+                        <div class="matchup-cell">
+                            <div class="team-cell {% if pred.predicted_winner == pred.away %}team-predicted{% endif %}">
+                                {{ pred.away }}
+                            </div>
+                            <div class="vs-separator">@</div>
+                            <div class="team-cell {% if pred.predicted_winner == pred.home %}team-predicted{% endif %}">
+                                {{ pred.home }}
+                            </div>
+                            {% if pred.neutral_site %}
+                            <div class="neutral-indicator">(Neutral Site)</div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <strong>{{ pred.predicted_winner }}</strong> -{{ pred.margin|round(1) }}
+                    </td>
+                    <td>
+                        {% if pred.betting_spread and pred.betting_spread|string != 'nan' %}
+                            {% if pred.betting_spread < 0 %}
+                            {{ pred.home }} {{ pred.betting_spread }}
+                            {% else %}
+                            {{ pred.away }} +{{ pred.betting_spread }}
+                            {% endif %}
+                        {% else %}
+                        <span class="no-data">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if pred.spread_diff and pred.spread_diff|string != 'nan' %}
+                        <span class="edge-value {% if pred.spread_diff|abs >= 7 %}high{% elif pred.spread_diff|abs >= 5 %}medium{% endif %}">
+                            +{{ pred.spread_diff|abs|round(1) }}
+                        </span>
+                        {% else %}
+                        <span class="no-data">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="confidence-bar-cell">
+                            <div class="confidence-bar-small">
+                                <div class="confidence-fill-small" data-width="{{ pred.prob|round(1) }}"></div>
+                            </div>
+                            <span class="confidence-text-small">{{ pred.prob|round(1) }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-  <script>
-    // Prevent selecting the same team twice
-    document.getElementById('home_team').addEventListener('change', function() {
-      const awaySelect = document.getElementById('away_team');
-      if (this.value === awaySelect.value) {
-        alert('Please select different teams for home and away!');
-        awaySelect.value = '';
-      }
-    });
+        <div class="predictions-legend">
+            <h4>Edge Legend</h4>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color high"></div>
+                    <span class="legend-label"><strong>High Edge (7+ points)</strong> - Strong value opportunity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color medium"></div>
+                    <span class="legend-label"><strong>Medium Edge (5-7 points)</strong> - Moderate value opportunity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color low"></div>
+                    <span class="legend-label"><strong>Low Edge (&lt;5 points)</strong> - Minimal value</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 
-    document.getElementById('away_team').addEventListener('change', function() {
-      const homeSelect = document.getElementById('home_team');
-      if (this.value === homeSelect.value) {
-        alert('Please select different teams for home and away!');
-        homeSelect.value = '';
-      }
-    });
-  </script>
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo-section">
+                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="footer-logo">
+                        <div class="footer-brand-name">PetersonPredicts</div>
+                    </div>
+                    <p class="footer-description">
+                        Advanced AI-powered sports analytics and predictions for college football and basketball.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Product</h4>
+                    <div class="footer-links">
+                        <a href="/football">Football</a>
+                        <a href="/basketball">Basketball</a>
+                        <a href="/rankings">Rankings</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Company</h4>
+                    <div class="footer-links">
+                        <a href="/">Home</a>
+                        <a href="mailto:contact@petersonpredicts.com">contact@petersonpredicts.com</a>
+                        <a href="/terms">Terms & Conditions</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Account</h4>
+                    <div class="footer-links">
+                        <a href="/logout">Log Out</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2025 PetersonPredicts. All rights reserved.</div>
+                <div class="footer-legal">
+                    <span>For entertainment purposes only</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function updatePredictions() {
+            const conf = document.getElementById('conf-select').value;
+            window.location.href = '/basketball?conference=' + conf;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.confidence-fill-small').forEach(function(el) {
+                var width = el.getAttribute('data-width');
+                if (width) {
+                    el.style.width = width + '%';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

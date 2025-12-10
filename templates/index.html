@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetersonPredicts | Machine Learning Sports Analytics & Predictions</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="season-info">2025-26 College Basketball Season | 2025 College Football Season</div>
+            <div class="top-nav-links">
+                <a href="#pricing">Pricing</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="logo">
+                <a href="/" class="brand-name">PetersonPredicts</a>
+            </div>
+            <nav class="main-nav">
+                <a href="/" class="active">Home</a>
+                {% if user_logged_in %}
+                <a href="/football">Football</a>
+                <a href="/basketball">Basketball</a>
+                <a href="/rankings">Rankings</a>
+                {% else %}
+                <a href="#predictions-preview" class="nav-locked">Predictions 🔒</a>
+                <a href="#rankings-preview" class="nav-locked">Rankings 🔒</a>
+                {% endif %}
+            </nav>
+            <div class="header-actions">
+                {% if user_logged_in %}
+                <span class="user-badge">{{ user_email }}</span>
+                <a href="/logout" class="btn-logout">Log Out</a>
+                {% else %}
+                <a href="/login" class="btn-login">Log In</a>
+                <a href="/login" class="btn-subscribe">Subscribe - $5/mo</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-header">
+                <span class="hero-label">Machine Learning Analytics</span>
+                <h1>Sports Predictions Built on Advanced Machine Learning</h1>
+                <p class="hero-description">
+                    Our proprietary algorithms analyzes numerous data points to identify value in college football and basketball markets.
+                </p>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-value">61.2%</div>
+                    <div class="hero-stat-label">Football ATS</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">56.1%</div>
+                    <div class="hero-stat-label">Basketball ATS</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">2,700+</div>
+                    <div class="hero-stat-label">Games Analyzed</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% if featured_pick %}
+    <section class="featured-section">
+        <div class="featured-content">
+            <div class="section-header">
+                <h2 class="section-title">Today's Featured Pick</h2>
+                <span class="section-badge">Free Preview</span>
+            </div>
+            <div class="featured-pick">
+                <div class="pick-main">
+                    {% if featured_pick.edge >= 7 %}
+                    <span class="pick-badge">High Value</span>
+                    {% elif featured_pick.edge >= 5 %}
+                    <span class="pick-badge medium">Medium Value</span>
+                    {% endif %}
+                    <div class="pick-matchup">
+                        <div class="pick-team {% if featured_pick.predicted_winner == featured_pick.home %}predicted{% endif %}">
+                            {{ featured_pick.home }}
+                        </div>
+                        <div class="pick-vs">vs</div>
+                        <div class="pick-team {% if featured_pick.predicted_winner == featured_pick.away %}predicted{% endif %}">
+                            {{ featured_pick.away }}
+                        </div>
+                    </div>
+                    <div class="pick-meta">
+                        <span>{{ featured_pick.sport|title }}</span>
+                        {% if featured_pick.neutral_site %}
+                        <span>Neutral Site</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="pick-sidebar">
+                    <div class="pick-stat">
+                        <span class="pick-stat-label">Model Spread</span>
+                        <span class="pick-stat-value">{{ featured_pick.predicted_winner }} -{{ featured_pick.margin }}</span>
+                    </div>
+                    {% if featured_pick.betting_spread %}
+                    <div class="pick-stat">
+                        <span class="pick-stat-label">Vegas Line</span>
+                        <span class="pick-stat-value">
+                            {% if featured_pick.betting_spread < 0 %}
+                            {{ featured_pick.home }} {{ featured_pick.betting_spread }}
+                            {% else %}
+                            {{ featured_pick.away }} +{{ featured_pick.betting_spread }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="pick-stat">
+                        <span class="pick-stat-label">Edge</span>
+                        <span class="pick-stat-value edge">+{{ featured_pick.edge }}</span>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="pick-stat">
+                            <span class="pick-stat-label">Win %</span>
+                            <span class="pick-stat-value">{{ featured_pick.prob|round(1) }}%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" data-width="{{ featured_pick.prob|round(1) }}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="featured-cta">
+                <p>Want to see all {{ 'today\'s' if featured_pick.sport == 'basketball' else 'this week\'s' }} picks with full analysis?</p>
+                {% if user_logged_in %}
+                <a href="/{{ featured_pick.sport }}" class="btn btn-primary">View All Predictions</a>
+                {% else %}
+                <div class="locked-cta">
+                    <div class="lock-icon">🔒</div>
+                    <p>Subscribe to unlock all predictions</p>
+                    <a href="/login" class="btn btn-primary">Get Access - $5/mo</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <section id="predictions-preview" class="preview-section">
+        <div class="preview-content">
+            <div class="section-header">
+                <h2 class="section-title">Daily Predictions</h2>
+                <p class="section-subtitle">Machine learning powered predictions with proven edge detection</p>
+            </div>
+            
+            {% if not user_logged_in %}
+            <div class="locked-preview">
+                <div class="preview-blur">
+                    <div class="sample-games">
+                        <div class="game-card blur">
+                            <div class="game-header">
+                                <span class="game-time">Today, 7:00 PM ET</span>
+                                <span class="edge-badge big">High Edge</span>
+                            </div>
+                            <div class="game-body">
+                                <div class="matchup">
+                                    <div class="team">Duke vs UNC</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="game-card blur">
+                            <div class="game-header">
+                                <span class="game-time">Today, 9:00 PM ET</span>
+                                <span class="edge-badge medium">Med Edge</span>
+                            </div>
+                            <div class="game-body">
+                                <div class="matchup">
+                                    <div class="team">Kansas vs Baylor</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-lock-overlay">
+                    <div class="lock-content">
+                        <div class="lock-icon-big">🔒</div>
+                        <h3>Subscribe to Unlock All Predictions</h3>
+                        <p>Get access to daily predictions for both football and basketball with detailed edge analysis</p>
+                        <a href="/login" class="btn btn-large btn-primary">Get Started - $5/month</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="predictions-links">
+                <a href="/football" class="prediction-link-card">
+                    <h3>Football Predictions</h3>
+                    <p>View all FBS game predictions with edge detection</p>
+                </a>
+                <a href="/basketball" class="prediction-link-card">
+                    <h3>Basketball Predictions</h3>
+                    <p>View all D1 game predictions with edge detection</p>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section id="rankings-preview" class="preview-section">
+        <div class="preview-content">
+            <div class="section-header">
+                <h2 class="section-title">Power Rankings</h2>
+            </div>
+            <div class="rankings-preview-grid">
+                <div class="rankings-preview-card">
+                    <div class="preview-header">
+                        <h3>College Football Top 5</h3>
+                        <span class="preview-badge">Live Rankings</span>
+                    </div>
+                    <div class="preview-table">
+                        {% for team in football_top5 %}
+                        <div class="preview-row">
+                            <span class="preview-rank">{{ loop.index }}</span>
+                            <span class="preview-team">{{ team.team }}</span>
+                            <span class="preview-rating">{{ team.rating|round(1) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if not user_logged_in %}
+                    <div class="preview-overlay">
+                        <div class="preview-lock">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <p>Subscribe to see full rankings</p>
+                            <a href="/login" class="btn btn-small btn-primary">Unlock Rankings</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="rankings-preview-card">
+                    <div class="preview-header">
+                        <h3>College Basketball Top 5</h3>
+                        <span class="preview-badge">Live Rankings</span>
+                    </div>
+                    <div class="preview-table">
+                        {% for team in basketball_top5 %}
+                        <div class="preview-row">
+                            <span class="preview-rank">{{ loop.index }}</span>
+                            <span class="preview-team">{{ team.team }}</span>
+                            <span class="preview-rating">{{ team.rating|round(1) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if not user_logged_in %}
+                    <div class="preview-overlay">
+                        <div class="preview-lock">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <p>Subscribe to see full rankings</p>
+                            <a href="/login" class="btn btn-small btn-primary">Unlock Rankings</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="model-explanation-section">
+    <div class="model-content">
+        <div class="section-header">
+            <h2 class="section-title">How Our Model Works</h2>
+            <p class="section-subtitle">Advanced machine learning trained on thousands of games</p>
+        </div>
+        
+        <div class="model-steps">
+            <!-- Step 1 -->
+            <div class="model-step">
+                <div class="step-icon">📊</div>
+                <div class="step-content">
+                    <h3 class="step-title">1. Data Collection</h3>
+                    <p class="step-description">
+                        We analyze 2,700+ games worth of comprehensive statistics including offensive efficiency, 
+                        defensive ratings, turnover ratios, and advanced metrics for every D1 team.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="model-step">
+                <div class="step-icon">🧠</div>
+                <div class="step-content">
+                    <h3 class="step-title">2. Machine Learning</h3>
+                    <p class="step-description">
+                        Our regression model weighs dozens of factors to calculate team strength ratings. 
+                        The algorithm learns optimal weights from historical performance to maximize prediction accuracy. These weights learn from every game that is played. 
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Step 3 -->
+            <div class="model-step">
+                <div class="step-icon">⚡</div>
+                <div class="step-content">
+                    <h3 class="step-title">3. Prediction Generation</h3>
+                    <p class="step-description">
+                        For each matchup, the model considers team ratings, statistical differentials, 
+                        home court advantage, and neutral site factors to predict the margin and win probability.
+                        The molde outputs the predcited winner, point margin along with the edge versus the vegas line
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    </section>
+
+    <section class="pricing-section" id="pricing">
+        <div class="pricing-content">
+            <h2 class="section-title centered">Simple, Transparent Pricing</h2>
+            <p class="section-subtitle">No hidden fees. Cancel anytime.</p>
+            
+            <div class="pricing-card">
+                <div class="pricing-header">
+                    <h3 class="pricing-title">Full Access</h3>
+                    <div class="pricing-price">
+                        <span class="price-amount">$5</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                </div>
+                <div class="pricing-features">
+                    <div class="pricing-feature">
+                        <svg class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>All daily predictions (Football & Basketball)</span>
+                    </div>
+                    <div class="pricing-feature">
+                        <svg class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Full rankings and analytics</span>
+                    </div>
+                    <div class="pricing-feature">
+                        <svg class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Custom matchup predictor</span>
+                    </div>
+                    <div class="pricing-feature">
+                        <svg class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Edge detection & confidence ratings</span>
+                    </div>
+                </div>
+                <div class="pricing-cta">
+                    <a href="/login" class="btn btn-large btn-primary">Get Started</a>
+                    <p class="pricing-note">Venmo payment • Manual approval within 24 hours</p>
+                </div>
+            </div>
+
+            <div class="payment-steps">
+                <h4>How to Subscribe</h4>
+                <div class="steps-grid">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h5>Create Account</h5>
+                            <p>Sign up with your email</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h5>Send Payment</h5>
+                            <p>Venmo $5 to @BradyPeterson2</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h5>Get Approved</h5>
+                            <p>Access granted within 24 hours</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo-section">
+                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="footer-logo">
+                        <div class="footer-brand-name">PetersonPredicts</div>
+                    </div>
+                    <p class="footer-description">
+                        Advanced AI-powered sports analytics and predictions for college football and basketball.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Product</h4>
+                    <div class="footer-links">
+                        {% if user_logged_in %}
+                        <a href="/football">Football</a>
+                        <a href="/basketball">Basketball</a>
+                        <a href="/rankings">Rankings</a>
+                        {% else %}
+                        <a href="#predictions-preview">Predictions</a>
+                        <a href="#rankings-preview">Rankings</a>
+                        {% endif %}
+                        <a href="#pricing">Pricing</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Company</h4>
+                    <div class="footer-links">
+                        <a href="mailto:contact@petersonpredicts.com">contact@petersonpredicts.com</a>
+                        <a href="/terms">Terms & Conditions</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Account</h4>
+                    <div class="footer-links">
+                        {% if user_logged_in %}
+                        <a href="/logout">Log Out</a>
+                        {% else %}
+                        <a href="/login">Log In</a>
+                        <a href="/login">Sign Up</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2025 PetersonPredicts. All rights reserved.</div>
+                <div class="footer-legal">
+                    <span>For entertainment purposes only. This is not advice and should just be used as a reference.</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // Set width for confidence bars
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.confidence-fill').forEach(function(el) {
+            var width = el.getAttribute('data-width');
+            if (width) {
+                el.style.width = width + '%';
+            }
+        });
+        
+        document.querySelectorAll('.confidence-fill-small').forEach(function(el) {
+            var width = el.getAttribute('data-width');
+            if (width) {
+                el.style.width = width + '%';
+            }
+        });
+    });
+    </script>
+</body>
+</html>

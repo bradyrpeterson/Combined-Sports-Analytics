@@ -1,54 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ sport }} Rankings</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rankings | PetersonPredicts</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
-  <!-- Navigation Bar -->
-  <nav class="sports-nav">
-    <div class="nav-container">
-      <a href="{{ url_for('landing') }}" class="nav-logo">Home</a>
-      <div class="nav-links">
-        <a href="{{ url_for('football') }}" class="nav-link">Football</a>
-        <a href="{{ url_for('basketball') }}" class="nav-link">Basketball</a>
-        <a href="{{ url_for ('logout') }}" class="nav-link">Logout</a>
-        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-      </div>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="season-info">Power Rankings Updated Daily</div>
+            <div class="top-nav-links">
+                <a href="/logout">Log Out</a>
+            </div>
+        </div>
     </div>
-  </nav>
 
-  <div class="container">
-    <h1> PPI (Pure Power Index)</h1>
-    <p>Ratings derived exclusively from game outcomes compared to expected and average.</p>
-    <a href="{{ back_url }}" class="nav-link">← Back to Predictor</a>
+    <!-- Main Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="PetersonPredicts Logo" class="logo">
+                <a href="/" class="brand-name">PetersonPredicts</a>
+            </div>
+            <nav class="main-nav">
+                <a href="/">Home</a>
+                <a href="/football">Football</a>
+                <a href="/basketball">Basketball</a>
+                <a href="/rankings" class="active">Rankings</a>
+            </nav>
+            <div class="header-actions">
+                <span class="user-badge">Subscribed</span>
+            </div>
+        </div>
+    </header>
 
-    <div style="margin: 30px 0;">
-      <table class="predictions-table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Team</th>
-            <th>Rating</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for _, row in rankings.iterrows() %}
-          <tr>
-            <td style="text-align: center; font-weight: 700;">{{ row.Rank }}</td>
-            <td>{{ row.team }}</td>
-            <td style="font-weight: 600;">
-                {{ row.rating }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Power Rankings</h1>
+            <p class="page-subtitle">Power rankings based on comprehensive performance metrics</p>
+        </div>
     </div>
-  </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="rankings-container">
+            <!-- Football Rankings -->
+            <div class="rankings-section">
+                <div class="rankings-header">
+                    <h2 class="rankings-title">College Football</h2>
+                </div>
+                <table class="rankings-table">
+                    {% for team in football_rankings %}
+                    <tr>
+                        <td class="rank-number">{{ loop.index }}</td>
+                        <td class="team-name-col">{{ team.team }}</td>
+                        <td class="rating-col">{{ team.rating|round(2) }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- Basketball Rankings -->
+            <div class="rankings-section">
+                <div class="rankings-header">
+                    <h2 class="rankings-title">College Basketball</h2>
+                </div>
+                <table class="rankings-table">
+                    {% for team in basketball_rankings %}
+                    <tr>
+                        <td class="rank-number">{{ loop.index }}</td>
+                        <td class="team-name-col">{{ team.team }}</td>
+                        <td class="rating-col">{{ team.rating|round(2) }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Rankings Explanation -->
+        <div class="rankings-info">
+            <h3>How Rankings Work</h3>
+            <p>
+                Our power rankings are generated using advanced machine learning models that analyze team performance across multiple metrics including offensive and defensive efficiency, strength of schedule, and recent form. Rankings update daily and serve as the foundation for our prediction models.
+            </p>
+            <p>
+                <strong>Rating Scale:</strong> The rating represents a team's expected point differential against an average opponent on a neutral field. For example, a team with a +15 rating would be expected to beat an average team by 15 points.
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo-section">
+                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="footer-logo">
+                        <div class="footer-brand-name">PetersonPredicts</div>
+                    </div>
+                    <p class="footer-description">
+                        Advanced AI-powered sports analytics and predictions for college football and basketball.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Product</h4>
+                    <div class="footer-links">
+                        <a href="/football">Football</a>
+                        <a href="/basketball">Basketball</a>
+                        <a href="/rankings">Rankings</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Company</h4>
+                    <div class="footer-links">
+                        <a href="/">Home</a>
+                        <a href="mailto:contact@petersonpredicts.com">contact@petersonpredicts.com</a>
+                        <a href="/terms">Terms & Conditions</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Account</h4>
+                    <div class="footer-links">
+                        <a href="/logout">Log Out</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2025 PetersonPredicts. All rights reserved.</div>
+                <div class="footer-legal">
+                    <span>For entertainment purposes only</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
