@@ -237,9 +237,13 @@ def predict_game(home, away, neutral_site=False):
     prob = 1 / (1 + np.exp(-margin / 7))  # rough logistic
     return margin, prob
 
-def get_betting_lines(week, year=2025):
+def get_betting_lines(week, year=2025, season_type="regular"):
    #Get draftkings specific betting lines for the week
-    lines_url = f"https://api.collegefootballdata.com/lines?year={year}&week={week}&seasonType=regular"
+    if season_type == "postseason":
+        # Postseason doesn't use week numbers
+        lines_url = f"https://api.collegefootballdata.com/lines?year={year}&seasonType=postseason"
+    else:
+        lines_url = f"https://api.collegefootballdata.com/lines?year={year}&week={week}&seasonType=regular"
     
     try:
         response = requests.get(lines_url, headers=headers)
@@ -307,7 +311,10 @@ def get_upcoming_predictions(week=None,conference=None):
             (games_to_predict["awayConference"] == conference)
         ]
     # Fetch betting lines for this week
-    betting_lines = get_betting_lines(week if week else next_week)
+    if week and int(week) > 16:
+        betting_lines = get_betting_lines(week, season_type="postseason")
+    else:
+        betting_lines = get_betting_lines(week if week else next_week, season_type="regular")
 
     predictions = []
     for _, game in games_to_predict.iterrows():
