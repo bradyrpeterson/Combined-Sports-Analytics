@@ -104,7 +104,7 @@
                             {% if pred.betting_spread < 0 %}
                             {{ pred.home }} {{ pred.betting_spread }}
                             {% else %}
-                            {{ pred.away }} +{{ pred.betting_spread }}
+                            {{ pred.away }} -{{ pred.betting_spread }}
                             {% endif %}
                         {% else %}
                         <span class="no-data">N/A</span>
