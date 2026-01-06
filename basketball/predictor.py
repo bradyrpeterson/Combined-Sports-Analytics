@@ -304,28 +304,74 @@ def calculate_edge_highlight(model_margin, betting_spread):
 
 #Get upcoming games in order to print them
 def get_upcoming_predictions(conference=None):
-    # Use the upcoming games dataset (no scores yet)
-    games_to_predict = upcoming.copy()
+    """
+    Get predictions for today's games by fetching directly from API.
+    Uses date range parameter to get games from 12:00 AM - 11:59 PM EST today.
+    """
     
-    # Only care about games that are happening today in EST
+    # Calculate date range for TODAY only (12:00 AM - 11:59 PM EST)
+    import pytz
+    utc = pytz.UTC
+    est = pytz.timezone('America/New_York')
+    now_est = datetime.now(est)
+    
+    # Start: midnight TODAY in EST -> UTC
+    start_of_today_est = now_est.replace(hour=0, minute=0, second=0, microsecond=0)
+    start_of_today_utc = start_of_today_est.astimezone(utc)
+    
+    # End: 11:59 PM TODAY in EST -> UTC
+    end_of_today_est = now_est.replace(hour=23, minute=59, second=59, microsecond=999999)
+    end_of_today_utc = end_of_today_est.astimezone(utc)
+    
+    # Format as ISO 8601 with milliseconds
+    start_date_str = start_of_today_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    end_date_str = end_of_today_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    
+    # Fetch today's games directly from API
+    games_url = f"https://api.collegebasketballdata.com/games?season=2026&startDateRange={start_date_str}&endDateRange={end_date_str}"
+    
+    print(f"[get_upcoming_predictions] Fetching today's games from API")
+    print(f"  Date range: {start_date_str} to {end_date_str}")
+    
+    try:
+        response = requests.get(games_url, headers=headers)
+        response.raise_for_status()
+        todays_games_data = response.json()
+        todays_games = pd.DataFrame(todays_games_data)
+        
+        print(f"  API returned: {len(todays_games)} games")
+        
+        if len(todays_games) == 0:
+            print(f"  No games scheduled for today")
+            return pd.DataFrame()
+        
+        # Filter for D1 teams
+        todays_games = todays_games[
+            todays_games["homeTeam"].isin(d1_teams) | 
+            todays_games["awayTeam"].isin(d1_teams)
+        ]
+        
+        print(f"  After D1 filter: {len(todays_games)} games")
+        
+        # Filter for non-final games only (upcoming)
+        games_to_predict = todays_games[todays_games["status"] != "final"].copy()
+        
+        print(f"  Upcoming (non-final): {len(games_to_predict)} games")
+        
+    except Exception as e:
+        print(f"  Error fetching today's games from API: {e}")
+        return pd.DataFrame()
+    
+    # Convert to EST for sorting
     games_to_predict["startDate"] = pd.to_datetime(
         games_to_predict["startDate"], utc=True, errors="coerce"
     )
-
-    # Convert UTC → EST
     games_to_predict["startDate_EST"] = games_to_predict["startDate"].dt.tz_convert("America/New_York")
+    
+    # Sort by game time
+    games_to_predict = games_to_predict.sort_values("startDate_EST")
 
-    # Get today's date in EST
-    import pytz
-    est = pytz.timezone('America/New_York')
-    today_est = datetime.now(est).date()
-
-    # Filter only today's games
-    games_to_predict = games_to_predict[
-        games_to_predict["startDate_EST"].dt.date == today_est
-    ]
-
-    # Filter by conferences
+    # Filter by conference if specified
     if conference is not None and conference != "All":
         games_to_predict = games_to_predict[
             (games_to_predict["homeConference"] == conference) | 
@@ -338,8 +384,8 @@ def get_upcoming_predictions(conference=None):
     predictions = []
     for _, game in games_to_predict.iterrows():
         home, away = game["homeTeam"], game["awayTeam"]
-
-        is_neutral = game.get("neutralSite",False)
+        is_neutral = game.get("neutralSite", False)
+        
         # Skip games where data is missing
         if home not in ratings.index or away not in ratings.index:
             continue
@@ -358,7 +404,6 @@ def get_upcoming_predictions(conference=None):
             spread_diff = None
             if betting_spread is not None:
                 edge_class = calculate_edge_highlight(margin, betting_spread)
-                # Calculate the actual difference for display
                 betting_margin = -betting_spread
                 spread_diff = round(margin - betting_margin, 1)
             
@@ -377,5 +422,6 @@ def get_upcoming_predictions(conference=None):
             print(f"Error predicting {home} vs {away}: {e}")
             continue
 
-    # Return DataFrame
+    print(f"[get_upcoming_predictions] Returning {len(predictions)} predictions")
+    
     return pd.DataFrame(predictions)
