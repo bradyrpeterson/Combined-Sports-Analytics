@@ -53,7 +53,7 @@
                 <span class="hero-label">Machine Learning Analytics</span>
                 <h1>Sports Predictions Built on Advanced Machine Learning</h1>
                 <p class="hero-description">
-                    Our proprietary algorithms analyzes numerous data points to identify value in college football and basketball markets.
+                    The model creates rankings and predictions based on a two-stage linear regression of advanced stats combined with a power rating system. 
                 </p>
             </div>
             <div class="hero-stats">
@@ -136,7 +136,7 @@
                 </div>
             </div>
             <div class="featured-cta">
-                <p>Want to see all {{ 'today\'s' if featured_pick.sport == 'basketball' else 'this week\'s' }} picks with full analysis?</p>
+                <p>Click below to see {{ 'today\'s' if featured_pick.sport == 'basketball' else 'this week\'s' }} picks with predicted margins</p>
                 {% if user_logged_in %}
                 <a href="/{{ featured_pick.sport }}" class="btn btn-primary">View All Predictions</a>
                 {% else %}
@@ -199,11 +199,11 @@
             <div class="predictions-links">
                 <a href="/football" class="prediction-link-card">
                     <h3>Football Predictions</h3>
-                    <p>View all FBS game predictions with edge detection</p>
+                    <p>View all FBS game predictions for the week</p>
                 </a>
                 <a href="/basketball" class="prediction-link-card">
                     <h3>Basketball Predictions</h3>
-                    <p>View all D1 game predictions with edge detection</p>
+                    <p>View all D1 game predictions for the day</p>
                 </a>
             </div>
             {% endif %}
@@ -288,8 +288,8 @@
                 <div class="step-content">
                     <h3 class="step-title">1. Data Collection</h3>
                     <p class="step-description">
-                        We analyze 2,700+ games worth of comprehensive statistics including offensive efficiency, 
-                        defensive ratings, turnover ratios, and advanced metrics for every D1 team.
+                        We analyze 2,0000+ games worth of comprehensive statistics and game outcomes. We include offensive efficiency, 
+                        defensive ratings, turnover ratios, and advanced metrics for every FBS or D1 team.
                     </p>
                 </div>
             </div>
@@ -363,7 +363,7 @@
                 </div>
                 <div class="pricing-cta">
                     <a href="/login" class="btn btn-large btn-primary">Get Started</a>
-                    <p class="pricing-note">Venmo payment • Manual approval within 24 hours</p>
+                    <p class="pricing-note">Manual approval within 24 hours</p>
                 </div>
             </div>
 
@@ -381,7 +381,6 @@
                         <div class="step-number">2</div>
                         <div class="step-content">
                             <h5>Send Payment</h5>
-                            <p>Venmo $5 to @BradyPeterson2</p>
                         </div>
                     </div>
                     <div class="step">

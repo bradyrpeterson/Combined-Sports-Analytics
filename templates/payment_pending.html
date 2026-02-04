@@ -15,30 +15,19 @@
         <div class="logo-circle">
           <img src="{{ url_for('static', filename='favicon.png') }}" alt="PetersonPredicts Logo">
         </div>
-        <h1>⏳ Payment Pending</h1>
+        <h1>⏳</h1>
         <p class="subtitle">You're almost there!</p>
       </div>
 
       <div class="payment-instructions-box">
-        <h2>Complete Your Payment</h2>
-        
-        <div class="payment-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h3>Send Payment via Venmo</h3>
-            <div class="venmo-details">
-              <p class="venmo-username">@BradyPeterson2</p>
-              <p class="venmo-amount">$5.00</p>
-            </div>
-          </div>
-        </div>
+        <h2>Complete Your Account Creation</h2>
 
         <div class="payment-step">
           <div class="step-number">2</div>
           <div class="step-content">
-            <h3>Include Your Email in the Note</h3>
+            <h3>Use the same email to ask any questions</h3>
             <p class="user-email">{{ email }}</p>
-            <p class="instruction-text">Copy this email and paste it in the Venmo payment note</p>
+            <p class="instruction-text">Copy this email</p>
           </div>
         </div>
 
@@ -46,14 +35,14 @@
           <div class="step-number">3</div>
           <div class="step-content">
             <h3>Wait for Approval</h3>
-            <p class="instruction-text">Your account will be activated within 24 hours of payment confirmation</p>
+            <p class="instruction-text">Your account will be activated within 24 hours of emailing</p>
           </div>
         </div>
       </div>
 
       <div class="payment-footer">
         <p class="footer-note">
-          <strong>Already paid?</strong> Your account is being processed. Check back in a few hours or 
+          <strong>Already made an account?</strong> Your account is being processed. Check back in a few hours or 
           <a href="{{ url_for('logout') }}">log out and log back in</a> to refresh.
         </p>
         
