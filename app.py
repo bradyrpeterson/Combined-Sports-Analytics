@@ -228,7 +228,7 @@ def index():
                     }
         
         if not featured_pick:
-            print("⚠️ No featured pick found (no games with sufficient edge)")
+            print("No featured pick found (no games with sufficient edge)")
         
         # Get top 5 rankings for preview
         football_top5 = football_predictor.FBS_rankings.head(5).to_dict('records')
@@ -242,7 +242,7 @@ def index():
                              user_logged_in=user_logged_in,
                              user_email=user_email)
     except Exception as e:
-        print(f"❌ Error loading index: {e}")
+        print(f"Error loading index: {e}")
         import traceback
         traceback.print_exc()
         return render_template('index.html', 
@@ -339,7 +339,7 @@ def basketball():
             conference=conference if conference != "All" else None
         )
         
-        # COMPLETE FIX: Clean up ALL NaN values
+        #Clean up ALL NaN values
         if len(predictions_df) > 0:
             # Check first row to see if prob is decimal or percentage
             sample_prob = predictions_df['prob'].iloc[0]
@@ -441,7 +441,7 @@ def predict_football():
         if prob <= 1:
             prob = prob * 100
         
-        # FIX: Flip probability if away team won (prob is always for home team)
+        #Flip probability if away team won (prob is always for home team)
         if winner == away:
             prob = 100 - prob
         
@@ -457,7 +457,6 @@ def predict_football():
 @app.route("/api/predict/basketball", methods=["POST"])
 @login_required
 def predict_basketball():
-    """API endpoint for custom basketball predictions"""
     try:
         data = request.json
         home = data.get("home")
@@ -474,7 +473,7 @@ def predict_basketball():
         if prob <= 1:
             prob = prob * 100
         
-        # FIX: Flip probability if away team won (prob is always for home team)
+        # Flip probability if away team won
         if winner == away:
             prob = 100 - prob
         

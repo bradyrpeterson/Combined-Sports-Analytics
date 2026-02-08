@@ -210,7 +210,7 @@ def predict_game(home, away, neutral_site=False):
     #Whether or not home field advantage is applied
     home_advantage = 0 if neutral_site else 1
 
-    #Different weights of each
+    #Old arbitrary weighting system before ML model
     #w_rating=0.7
     #_ypp=0.1
     #w_third=0.05
