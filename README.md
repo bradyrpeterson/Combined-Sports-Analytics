@@ -2,7 +2,7 @@
 
 A machine learning web application that predicts outcomes for college football and basketball games using linear regression and advanced performance metrics.
 
-**Live Demo:** https://combined-sports-analytics.onrender.com/
+**Live Link:** petersonpredicts.com
 
 ---
 
@@ -89,35 +89,6 @@ Visit `http://localhost:5000` in your browser.
 
 ---
 
-## 📁 Project Structure
-
-```
-sports-analytics/
-├── app.py                  # Main Flask application
-├── requirements.txt        # Python dependencies
-├── Procfile               # Deployment configuration
-│
-├── templates/             # HTML templates
-│   ├── landing.html      # Home page
-│   ├── football.html     # Football predictor
-│   └── basketball.html   # Basketball predictor
-│
-├── static/
-│   └── style.css         # Unified styling
-│
-├── football/
-│   ├── predictor.py      # Football prediction logic
-│   ├── fbs_teams_2025.json
-│   ├── team_logos.json
-│   └── team_color.json
-│
-└── basketball/
-    ├── predictor.py      # Basketball prediction logic
-    └── d1_teams_2025.json
-```
-
----
-
 ## 📝 Data Sources
 
 - **Game Results & Stats:** [CollegeFootballData API](https://collegefootballdata.com)
@@ -130,11 +101,5 @@ sports-analytics/
 
 **Brady Peterson**  
 [GitHub](https://github.com/bradyrpeterson) | [LinkedIn](https://www.linkedin.com/in/brady-peterson-b5ab02308/)
-
----
-
-## 📄 License
-
-This project is open source and available under the MIT License.
 
 ---
