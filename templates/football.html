@@ -31,7 +31,7 @@
                 <a href="/rankings">Rankings</a>
             </nav>
             <div class="header-actions">
-                <span class="user-badge">Subscribed</span>
+                <a href="/manage-subscription" class="user-badge" style="text-decoration: none;">Profile Information</a>
             </div>
         </div>
     </header>
@@ -198,9 +198,8 @@
 
     <script>
         function updatePredictions() {
-            const week = document.getElementById('week-select').value;
             const conf = document.getElementById('conf-select').value;
-            window.location.href = '/football?week=' + week + '&conference=' + conf;
+            window.location.href = '/football?conference=' + conf;
         }
 
         document.addEventListener('DOMContentLoaded', function() {

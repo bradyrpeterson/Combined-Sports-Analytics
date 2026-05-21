@@ -37,7 +37,7 @@
             </nav>
             <div class="header-actions">
                 {% if user_logged_in %}
-                <span class="user-badge">{{ user_email }}</span>
+                <a href="/manage-subscription" class="user-badge" style="text-decoration: none;">Profile Information</a>
                 <a href="/logout" class="btn-logout">Log Out</a>
                 {% else %}
                 <a href="/login" class="btn-login">Log In</a>
@@ -363,7 +363,6 @@
                 </div>
                 <div class="pricing-cta">
                     <a href="/login" class="btn btn-large btn-primary">Get Started</a>
-                    <p class="pricing-note">Manual approval within 24 hours</p>
                 </div>
             </div>
 
@@ -380,14 +379,15 @@
                     <div class="step">
                         <div class="step-number">2</div>
                         <div class="step-content">
-                            <h5>Send Payment</h5>
+                            <h5>Pay via Stripe</h5>
+                            <p>Secure payment processing</p>
                         </div>
                     </div>
                     <div class="step">
                         <div class="step-number">3</div>
                         <div class="step-content">
-                            <h5>Get Approved</h5>
-                            <p>Access granted within 24 hours</p>
+                            <h5>Log In</h5>
+                            <p>Access granted instantly after payment</p>
                         </div>
                     </div>
                 </div>

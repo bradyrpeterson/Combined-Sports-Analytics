@@ -11,7 +11,7 @@ from functools import wraps
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from datetime import datetime
-
+print(f"STRIPE KEY: {os.environ.get('STRIPE_SECRET_KEY', 'NOT FOUND')[:20]}")
 # Add both sport folders to Python path
 sys.path.append('./football')
 sys.path.append('./basketball')
@@ -51,7 +51,8 @@ def login_required(f):
             expires = user_data.get("subscription_expires")
             
             # Check if active subscription has expired
-            if status == "active" and expires:
+            is_free = user_data.get("is_free", False)
+            if status == "active" and expires and not is_free:
                 from datetime import timezone
                 now = datetime.now(timezone.utc)
                 
@@ -89,13 +90,13 @@ def login():
 
 @app.route("/auth-callback", methods=["POST"])
 def auth_callback():
-    """Handle authentication callback"""
     data = request.get_json()
     uid = data.get("uid")
     email = data.get("email")
 
     user_ref = db.collection("users").document(uid)
     user_doc = user_ref.get()
+    
     if not user_doc.exists:
         user_ref.set({
             "email": email,
@@ -104,11 +105,14 @@ def auth_callback():
             "approved_at": None,
             "subscription_expires": None
         })
-    
+        status = "pending"
+    else:
+        status = user_doc.to_dict().get("status", "pending")
+
     session["user_id"] = uid
     session["email"] = email
-    
-    return jsonify({'success': True}), 200
+
+    return jsonify({'success': True, 'status': status}), 200
 
 @app.route("/logout")
 def logout():
@@ -158,7 +162,14 @@ except Exception as e:
 def index():
     """Landing page - shows featured pick and top 5 rankings preview (PUBLIC)"""
     # Check if user is logged in
-    user_logged_in = 'user_id' in session
+    user_logged_in = False
+    if 'user_id' in session:
+        try:
+            user_doc = db.collection("users").document(session["user_id"]).get()
+            if user_doc.exists:
+                user_logged_in = user_doc.to_dict().get("status") == "active"
+        except:
+            pass
     user_email = session.get('email', None)
     
     try:
@@ -252,13 +263,6 @@ def index():
                              has_games=False,
                              user_logged_in=user_logged_in,
                              user_email=user_email)
-
-@app.route("/payment-pending")
-def payment_pending():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    return render_template('payment_pending.html', email=session.get('email'))
 
 @app.route("/football")
 @login_required
@@ -488,11 +492,209 @@ def predict_basketball():
 
 @app.route("/terms")
 def terms():
-    user_logged_in = 'user_id' in session
+    user_logged_in = False
+    if 'user_id' in session:
+        try:
+            user_doc = db.collection("users").document(session["user_id"]).get()
+            if user_doc.exists:
+                user_logged_in = user_doc.to_dict().get("status") == "active"
+        except:
+            pass
     user_email = session.get('email', None)
     return render_template("terms.html",
                            user_logged_in=user_logged_in,
                            user_email=user_email)
+import stripe
+
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID')
+ADMIN_SECRET = os.environ.get('ADMIN_SECRET')
+
+
+@app.route("/payment-pending")
+def payment_pending():
+    if 'user_id' not in session:
+        return redirect('/login')
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[{"price": STRIPE_PRICE_ID, "quantity": 1}],
+            customer_email=session.get("email"),
+            client_reference_id=session.get("user_id"),
+            success_url=request.host_url + "stripe-success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=request.host_url + "logout",  # logs them out on cancel
+        )
+        return redirect(checkout_session.url, code=303)
+    except Exception as e:
+        print(f"Stripe error: {e}")
+        return redirect('/login')
+
+
+@app.route("/create-checkout-session", methods=["POST"])
+def create_checkout_session():
+    """Create a Stripe Checkout session for $5/month subscription"""
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[{
+                "price": STRIPE_PRICE_ID,
+                "quantity": 1,
+            }],
+            customer_email=session.get("email"),
+            client_reference_id=session.get("user_id"),  # Firebase UID - used in webhook
+            success_url=request.host_url + "stripe-success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=request.host_url + "logout",  # logs them out on cancel
+        )
+        return redirect(checkout_session.url, code=303)
+    except Exception as e:
+        print(f"Stripe error: {e}")
+        return redirect("/payment-pending")
+
+
+@app.route("/stripe-success")
+def stripe_success():
+    session_id = request.args.get('session_id')
+    
+    if session_id and 'user_id' in session:
+        try:
+            from datetime import timezone, timedelta
+            
+            # Verify payment directly with Stripe — don't wait for webhook
+            checkout_session = stripe.checkout.Session.retrieve(session_id)
+            
+            if checkout_session.payment_status == 'paid':
+                user_ref = db.collection("users").document(session['user_id'])
+                user_ref.update({
+                    "status": "active",
+                    "subscription_id": checkout_session.subscription,
+                    "approved_at": datetime.now(timezone.utc),
+                    "subscription_expires": datetime.now(timezone.utc) + timedelta(days=35),
+                })
+                print(f"Activated via success redirect for UID: {session['user_id']}")
+        except Exception as e:
+            print(f"Error verifying Stripe session: {e}")
+    
+    return redirect("/")
+
+
+@app.route("/webhook/stripe", methods=["POST"])
+def stripe_webhook():
+    payload = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except (ValueError, stripe.error.SignatureVerificationError) as e:
+        print(f"Webhook error: {e}")
+        return jsonify({"error": "Invalid signature"}), 400
+
+    from datetime import timezone, timedelta
+
+    if event["type"] == "checkout.session.completed":
+        session_data = event["data"]["object"]
+        uid = session_data["client_reference_id"]
+        subscription_id = session_data["subscription"]
+        customer_id = session_data["customer"]
+
+        if uid:
+            user_ref = db.collection("users").document(uid)
+            user_ref.update({
+                "status": "active",
+                "subscription_id": subscription_id,
+                "stripe_customer_id": customer_id,
+                "approved_at": datetime.now(timezone.utc),
+                "subscription_expires": datetime.now(timezone.utc) + timedelta(days=35),
+            })
+            print(f"Activated account for UID: {uid}")
+
+    elif event["type"] == "invoice.paid":
+        invoice = event["data"]["object"]
+        customer_email = invoice["customer_email"]
+
+        if customer_email:
+            users = db.collection("users").where("email", "==", customer_email).get()
+            for user_doc in users:
+                user_doc.reference.update({
+                    "status": "active",
+                    "subscription_expires": datetime.now(timezone.utc) + timedelta(days=35),
+                })
+                print(f"Renewed subscription for: {customer_email}")
+
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        sub_id = subscription["id"]
+
+        users = db.collection("users").where("subscription_id", "==", sub_id).get()
+        for user_doc in users:
+            user_doc.reference.update({"status": "expired"})
+            print(f"Cancelled subscription: {sub_id}")
+
+    return jsonify({"status": "ok"}), 200
+
+@app.route("/manage-subscription")
+@login_required
+def manage_subscription():
+    user_ref = db.collection("users").document(session["user_id"])
+    user_data = user_ref.get().to_dict()
+
+    customer_id = user_data.get("stripe_customer_id")
+
+    if not customer_id:
+        return redirect("/football")  # free account, nothing to manage
+
+    
+
+    try:
+        portal_session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=request.host_url + "football",
+        )
+        return redirect(portal_session.url, code=303)
+    except Exception as e:
+        print(f"Portal error: {e}")
+        return redirect("/football")
+
+@app.route("/admin/grant-access", methods=["POST"])
+def admin_grant_access():
+    """
+    Grant free/admin access to an account.
+    POST with JSON: {"email": "...", "secret": "...", "free": true}
+    """
+    data = request.get_json()
+
+    if not data or data.get("secret") != ADMIN_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    email = data.get("email")
+    is_free = data.get("free", True)  # True = never expires
+
+    if not email:
+        return jsonify({"error": "Email required"}), 400
+
+    # Find user by email
+    users = db.collection("users").where("email", "==", email).get()
+
+    if not users:
+        return jsonify({"error": f"No user found with email {email}"}), 404
+
+    from datetime import timezone
+    for user_doc in users:
+        update_data = {
+            "status": "active",
+            "approved_at": datetime.now(timezone.utc),
+            "is_free": is_free,
+        }
+        if is_free:
+            update_data["subscription_expires"] = None  # Never expires
+        user_doc.reference.update(update_data)
+
+    return jsonify({"success": True, "message": f"Access granted to {email}"}), 200
 if __name__ == "__main__":
     print("=" * 80)
     print("SPORTS ANALYTICS HUB - COMPLETELY FIXED VERSION")

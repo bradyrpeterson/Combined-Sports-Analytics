@@ -189,36 +189,43 @@ a {
 }
 
 .btn-login {
-    color: var(--text-primary);
     padding: 0.5rem 1rem;
-    transition: color 0.2s;
+    background: transparent;
+    border: 1px solid var(--border-hover);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
 }
 
 .btn-login:hover {
-    color: #fff;
+    background: rgb(48, 179, 255);
+    border-color: rgb(255, 255, 255);
+    color: rgb(233, 233, 233);
 }
 
-.btn-subscribe,
-.btn-primary {
-    background: var(--accent-blue);
-    color: #fff;
-}
-
-.btn-subscribe:hover,
-.btn-primary:hover {
-    background: var(--accent-blue-hover);
-}
-
-.btn-secondary {
+.btn-subscribe{
+    padding: 0.5rem 1rem;
     background: transparent;
-    color: var(--text-primary);
     border: 1px solid var(--border-hover);
+    border-radius: 8px;
+    color: rgb(48, 179, 255);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
 }
 
-.btn-secondary:hover {
-    border-color: var(--accent-blue);
-    color: #fff;
+.btn-subscribe:hover{
+    background: rgb(48, 179, 255);
+    border-color: rgb(255, 255, 255);
+    color: rgb(233, 233, 233);
 }
+
+
+
 
 .btn-large {
     padding: 1rem 2.5rem;
