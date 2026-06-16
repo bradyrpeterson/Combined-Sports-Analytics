@@ -11,7 +11,7 @@ from functools import wraps
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from datetime import datetime
-print(f"STRIPE KEY: {os.environ.get('STRIPE_SECRET_KEY', 'NOT FOUND')[:20]}")
+
 # Add both sport folders to Python path
 sys.path.append('./football')
 sys.path.append('./basketball')

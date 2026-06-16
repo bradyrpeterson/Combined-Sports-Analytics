@@ -28,9 +28,7 @@ This project combines two sports prediction models into a unified platform. Both
 
 ## 🚀 Live Application
 
-Visit the app: **https://combined-sports-analytics.onrender.com/**
-
-*Note: First load may take 30 seconds as the free hosting service spins up.*
+Visit the app: **https://statalysts.com/**
 
 ---
 

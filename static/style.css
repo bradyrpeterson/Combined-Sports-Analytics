@@ -1,5 +1,5 @@
 /* ============================================
-   PETERSONPREDICTS - COMPLETE UNIFIED CSS
+   STATALYSTS - COMPLETE UNIFIED CSS
    Professional sports analytics design
    ============================================ */
 
@@ -253,7 +253,7 @@ a {
    ============================================ */
 
 .hero {
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
+    background: #000;
     border-bottom: 1px solid var(--border-color);
     padding: 4rem 2rem 3rem;
 }
@@ -261,10 +261,32 @@ a {
 .hero-content {
     max-width: 1400px;
     margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+}
+
+.hero-left {
+    flex: 1;
+    min-width: 0;
 }
 
 .hero-header {
-    max-width: 800px;
+    max-width: 700px;
+}
+
+.hero-logo-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-logo-img {
+    width: 400px;
+    height: 400px;
+    object-fit: contain;
+    mix-blend-mode: screen;
 }
 
 .hero-label {
@@ -1529,6 +1551,15 @@ a {
 }
 
 @media (max-width: 768px) {
+    .hero-content {
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .hero-logo-panel {
+        display: none;
+    }
+
     .hero h1 {
         font-size: 2rem;
     }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PetersonPredicts | Machine Learning Sports Analytics & Predictions</title>
+    <title>Statalysts | Machine Learning Sports Analytics & Predictions</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -22,7 +22,7 @@
         <div class="header-content">
             <div class="logo-section">
                 <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="logo">
-                <a href="/" class="brand-name">PetersonPredicts</a>
+                <a href="/" class="brand-name">Statalysts</a>
             </div>
             <nav class="main-nav">
                 <a href="/" class="active">Home</a>
@@ -41,7 +41,7 @@
                 <a href="/logout" class="btn-logout">Log Out</a>
                 {% else %}
                 <a href="/login" class="btn-login">Log In</a>
-                <a href="/login" class="btn-subscribe">Subscribe - $5/mo</a>
+                <a href="/login?tab=signup" class="btn-subscribe">Subscribe - $5/mo</a>
                 {% endif %}
             </div>
         </div>
@@ -49,26 +49,31 @@
 
     <section class="hero">
         <div class="hero-content">
-            <div class="hero-header">
-                <span class="hero-label">Machine Learning Analytics</span>
-                <h1>Sports Predictions Built on Advanced Machine Learning</h1>
-                <p class="hero-description">
-                    The model creates rankings and predictions based on a two-stage linear regression of advanced stats combined with a power rating system. 
-                </p>
+            <div class="hero-left">
+                <div class="hero-header">
+                    <span class="hero-label">Machine Learning Analytics</span>
+                    <h1>Sports Predictions Built on Advanced Machine Learning</h1>
+                    <p class="hero-description">
+                        The model creates rankings and predictions based on a two-stage linear regression of advanced stats combined with a power rating system.
+                    </p>
+                </div>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">61.2%</div>
+                        <div class="hero-stat-label">Football ATS</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">56.1%</div>
+                        <div class="hero-stat-label">Basketball ATS</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">2,700+</div>
+                        <div class="hero-stat-label">Games Analyzed</div>
+                    </div>
+                </div>
             </div>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <div class="hero-stat-value">61.2%</div>
-                    <div class="hero-stat-label">Football ATS</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value">56.1%</div>
-                    <div class="hero-stat-label">Basketball ATS</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value">2,700+</div>
-                    <div class="hero-stat-label">Games Analyzed</div>
-                </div>
+            <div class="hero-logo-panel">
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="Statalysts Logo" class="hero-logo-img">
             </div>
         </div>
     </section>
@@ -191,7 +196,7 @@
                         <div class="lock-icon-big">🔒</div>
                         <h3>Subscribe to Unlock All Predictions</h3>
                         <p>Get access to daily predictions for both football and basketball with detailed edge analysis</p>
-                        <a href="/login" class="btn btn-large btn-primary">Get Started - $5/month</a>
+                        <a href="/login?tab=signup" class="btn btn-large btn-primary">Get Started - $5/month</a>
                     </div>
                 </div>
             </div>
@@ -288,7 +293,7 @@
                 <div class="step-content">
                     <h3 class="step-title">1. Data Collection</h3>
                     <p class="step-description">
-                        We analyze 2,0000+ games worth of comprehensive statistics and game outcomes. We include offensive efficiency, 
+                        We analyze 2,000+ games worth of comprehensive statistics and game outcomes. We include offensive efficiency, 
                         defensive ratings, turnover ratios, and advanced metrics for every FBS or D1 team.
                     </p>
                 </div>
@@ -314,7 +319,7 @@
                     <p class="step-description">
                         For each matchup, the model considers team ratings, statistical differentials, 
                         home court advantage, and neutral site factors to predict the margin and win probability.
-                        The molde outputs the predcited winner, point margin along with the edge versus the vegas line
+                        The model outputs the predicted winner, point margin along with the edge versus the vegas line
                     </p>
                 </div>
             </div>
@@ -362,7 +367,7 @@
                     </div>
                 </div>
                 <div class="pricing-cta">
-                    <a href="/login" class="btn btn-large btn-primary">Get Started</a>
+                    <a href="/login?tab=signup" class="btn btn-large btn-primary">Get Started</a>
                 </div>
             </div>
 
@@ -401,7 +406,7 @@
                 <div class="footer-brand">
                     <div class="footer-logo-section">
                         <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="footer-logo">
-                        <div class="footer-brand-name">PetersonPredicts</div>
+                        <div class="footer-brand-name">Statalysts</div>
                     </div>
                     <p class="footer-description">
                         Advanced AI-powered sports analytics and predictions for college football and basketball.
@@ -424,7 +429,7 @@
                 <div>
                     <h4 class="footer-section-title">Company</h4>
                     <div class="footer-links">
-                        <a href="mailto:contact@petersonpredicts.com">contact@petersonpredicts.com</a>
+                        <a href="mailto:contact@statalysts.com">contact@statalysts.com</a>
                         <a href="/terms">Terms & Conditions</a>
                     </div>
                 </div>
@@ -441,7 +446,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <div>&copy; 2026 PetersonPredicts. All rights reserved.</div>
+                <div>&copy; 2026 Statalysts. All rights reserved.</div>
                 <div class="footer-legal">
                     <span>For entertainment purposes only. This is not advice and should just be used as a reference.</span>
                 </div>
