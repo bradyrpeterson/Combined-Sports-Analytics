@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>College Basketball Predictions | Statalysts</title>
+    <title>How to Read a Prediction | Statalysts</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -11,9 +11,9 @@
 <body>
     <div class="top-bar">
         <div class="top-bar-content">
-            <div class="season-info">2025-26 College Basketball Season</div>
+            <div class="season-info">Sample data &mdash; not a real game</div>
             <div class="top-nav-links">
-                <a href="/logout">Log Out</a>
+                <a href="#pricing">Pricing</a>
             </div>
         </div>
     </div>
@@ -26,50 +26,59 @@
             </div>
             <nav class="main-nav">
                 <a href="/">Home</a>
+                {% if user_logged_in %}
                 <a href="/football">Football</a>
-                <a href="/basketball" class="active">Basketball</a>
+                <a href="/basketball">Basketball</a>
                 <a href="/rankings">Rankings</a>
-                <a href="/example">Example</a>
+                {% else %}
+                <a href="/login" class="nav-locked">Predictions 🔒</a>
+                <a href="/login" class="nav-locked">Rankings 🔒</a>
+                {% endif %}
+                <a href="/example" class="active">Example</a>
             </nav>
             <div class="header-actions">
+                {% if user_logged_in %}
                 <a href="/manage-subscription" class="user-badge" style="text-decoration: none;">Profile Information</a>
+                <a href="/logout" class="btn-logout">Log Out</a>
+                {% else %}
+                <a href="/login" class="btn-login">Log In</a>
+                <a href="/login?tab=signup" class="btn-subscribe">Subscribe - $5/mo</a>
+                {% endif %}
             </div>
         </div>
     </header>
 
     <div class="page-header">
         <div class="page-header-content">
-            <h1 class="page-title">College Basketball Predictions</h1>
-            <p class="page-subtitle">Machine learning powered spread predictions with 56.1% ATS accuracy</p>
-        </div>
-    </div>
-
-    <div class="filters-section">
-        <div class="filters-content">
-            <div class="filter-group">
-                <span class="filter-label">Conference:</span>
-                <select class="filter-select" id="conf-select" onchange="updatePredictions()">
-                    <option value="All">All Conferences</option>
-                    {% for conf in conferences %}
-                    <option value="{{ conf }}" {% if conf == selected_conference %}selected{% endif %}>{{ conf }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="model-toggle">
-                <a href="/basketball/custom" class="btn btn-secondary">Custom Matchup</a>
-            </div>
+            <h1 class="page-title">How to Read a Prediction</h1>
+            <p class="page-subtitle">A breakdown of the key components of a prediction, and how to interpret them.</p>
         </div>
     </div>
 
     <div class="content">
-        {% if predictions|length == 0 %}
-        <div class="empty-state">
-            <div class="empty-icon">🏀</div>
-            <h2 class="empty-title">No Games Scheduled Today</h2>
-            <p class="empty-text">Check back tomorrow for new predictions</p>
+        <div class="model-steps" style="margin-top: 0; margin-bottom: 2.5rem;">
+            <div class="feature-card">
+                <div class="feature-title">Matchup</div>
+                <div class="feature-description">Away team on top, home team on bottom. Whichever team the model favors to win is highlighted.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title">Model Spread</div>
+                <div class="feature-description">Our model's own predicted margin. "Ohio State -9.5" means the model expects Ohio State to win by 9.5 points.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title">Vegas Line</div>
+                <div class="feature-description">The actual sportsbook spread for the same game, for comparison. Shows N/A if a line isn't posted yet.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title">Edge</div>
+                <div class="feature-description">How far our model's line disagrees with Vegas. A bigger edge means a bigger gap between our number and the market's &mdash; and more potential value if the model is right.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title">Win %</div>
+                <div class="feature-description">The model's estimated probability that its predicted winner actually wins the game.</div>
+            </div>
         </div>
-        {% else %}
+
         <table class="predictions-table">
             <thead>
                 <tr>
@@ -82,7 +91,7 @@
             </thead>
             <tbody>
                 {% for pred in predictions %}
-                <tr class="{% if pred.spread_diff and pred.spread_diff|abs >= 7 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-medium{% else %}edge-low{% endif %}">
+                <tr class="{% if pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 3 %}edge-medium{% else %}edge-low{% endif %}">
                     <td>
                         <div class="matchup-cell">
                             <div class="team-cell {% if pred.predicted_winner == pred.away %}team-predicted{% endif %}">
@@ -101,7 +110,7 @@
                         <strong>{{ pred.predicted_winner }}</strong> -{{ pred.margin|round(1) }}
                     </td>
                     <td>
-                        {% if pred.betting_spread and pred.betting_spread|string != 'nan' %}
+                        {% if pred.betting_spread is not none %}
                             {% if pred.betting_spread < 0 %}
                             {{ pred.home }} {{ pred.betting_spread }}
                             {% else %}
@@ -112,8 +121,8 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if pred.spread_diff and pred.spread_diff|string != 'nan' %}
-                        <span class="edge-value {% if pred.spread_diff|abs >= 7 %}high{% elif pred.spread_diff|abs >= 5 %}medium{% endif %}">
+                        {% if pred.spread_diff is not none %}
+                        <span class="edge-value {% if pred.spread_diff|abs >= 5 %}high{% elif pred.spread_diff|abs >= 3 %}medium{% endif %}">
                             +{{ pred.spread_diff|abs|round(1) }}
                         </span>
                         {% else %}
@@ -138,19 +147,27 @@
             <div class="legend-items">
                 <div class="legend-item">
                     <div class="legend-color high"></div>
-                    <span class="legend-label"><strong>High Edge (7+ points)</strong> - Strong value opportunity</span>
+                    <span class="legend-label"><strong>High Edge (5+ points)</strong> - Strong value opportunity</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color medium"></div>
-                    <span class="legend-label"><strong>Medium Edge (5-7 points)</strong> - Moderate value opportunity</span>
+                    <span class="legend-label"><strong>Medium Edge (3-5 points)</strong> - Moderate value opportunity</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color low"></div>
-                    <span class="legend-label"><strong>Low Edge (&lt;5 points)</strong> - Minimal value</span>
+                    <span class="legend-label"><strong>Low Edge (&lt;3 points)</strong> - Minimal value</span>
                 </div>
             </div>
         </div>
-        {% endif %}
+
+        <div class="featured-cta" style="margin-top: 2.5rem;">
+            <p>That's it &mdash; that's exactly what the real predictions page looks like, just with real games once the season is live.</p>
+            {% if user_logged_in %}
+            <a href="/football" class="btn btn-primary">View Real Predictions</a>
+            {% else %}
+            <a href="/login?tab=signup" class="btn btn-primary">Get Access - $5/mo</a>
+            {% endif %}
+        </div>
     </div>
 
     <footer class="footer">
@@ -168,9 +185,12 @@
                 <div>
                     <h4 class="footer-section-title">Product</h4>
                     <div class="footer-links">
+                        {% if user_logged_in %}
                         <a href="/football">Football</a>
                         <a href="/basketball">Basketball</a>
                         <a href="/rankings">Rankings</a>
+                        {% endif %}
+                        <a href="/example">Example</a>
                     </div>
                 </div>
                 <div>
@@ -184,25 +204,25 @@
                 <div>
                     <h4 class="footer-section-title">Account</h4>
                     <div class="footer-links">
+                        {% if user_logged_in %}
                         <a href="/logout">Log Out</a>
+                        {% else %}
+                        <a href="/login">Log In</a>
+                        <a href="/login">Sign Up</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
             <div class="footer-bottom">
                 <div>&copy; 2026 Statalysts. All rights reserved.</div>
                 <div class="footer-legal">
-                    <span>For entertainment purposes only</span>
+                    <span>For entertainment purposes only. This is not advice and should just be used as a reference.</span>
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        function updatePredictions() {
-            const conf = document.getElementById('conf-select').value;
-            window.location.href = '/basketball?conference=' + conf;
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.confidence-fill-small').forEach(function(el) {
                 var width = el.getAttribute('data-width');

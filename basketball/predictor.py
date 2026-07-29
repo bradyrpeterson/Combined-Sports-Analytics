@@ -271,7 +271,7 @@ def get_betting_lines(season=2026):
             # Look for dk spreads
             dk_spread = None
             for line in lines:
-                if line.get("provider") == "Draft Kings" or "Bovada":
+                if line.get("provider") in ("DraftKings", "Draft Kings", "Bovada"):
                     dk_spread = line.get("spread")
                     break
             
@@ -416,7 +416,8 @@ def get_upcoming_predictions(conference=None):
                 "betting_spread": betting_spread,
                 "edge_class": edge_class,
                 "spread_diff": spread_diff,
-                "neutral_site": is_neutral
+                "neutral_site": is_neutral,
+                "date": game["startDate_EST"].strftime("%Y-%m-%d") if pd.notna(game.get("startDate_EST")) else None
             })
         except Exception as e:
             print(f"Error predicting {home} vs {away}: {e}")

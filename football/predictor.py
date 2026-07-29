@@ -44,7 +44,7 @@ df = pd.DataFrame([g.to_dict() for g in games])
 #In case I need to see what columns the game dataset has to offer
 #print("Columns available:", df.columns.tolist())
 #Only keep the columns that matter
-need_cols = ["season","seasonType","week","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
+need_cols = ["season","seasonType","week","startDate","homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
 df=df[need_cols].copy()
 #Only care about games where one of the teams was FBS
 # Load list of FBS teams
@@ -345,6 +345,8 @@ def get_upcoming_predictions(week=None,conference=None):
                 betting_margin = -betting_spread
                 spread_diff = round(margin - betting_margin, 1)
             
+            game_date = pd.to_datetime(game.get("startDate"), utc=True, errors="coerce")
+
             predictions.append({
                 "home": home,
                 "away": away,
@@ -354,7 +356,8 @@ def get_upcoming_predictions(week=None,conference=None):
                 "betting_spread": betting_spread,
                 "edge_class": edge_class,
                 "spread_diff": spread_diff,
-                "neutral_site": is_neutral
+                "neutral_site": is_neutral,
+                "date": game_date.strftime("%Y-%m-%d") if pd.notna(game_date) else None
             })
         except Exception as e:
             print(f"Error predicting {home} vs {away}: {e}")

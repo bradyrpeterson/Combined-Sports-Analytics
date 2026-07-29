@@ -34,6 +34,7 @@
                 <a href="#predictions-preview" class="nav-locked">Predictions 🔒</a>
                 <a href="#rankings-preview" class="nav-locked">Rankings 🔒</a>
                 {% endif %}
+                <a href="/example">Example</a>
             </nav>
             <div class="header-actions">
                 {% if user_logged_in %}
@@ -57,23 +58,98 @@
                         The model creates rankings and predictions based on a two-stage linear regression of advanced stats combined with a power rating system.
                     </p>
                 </div>
-                <div class="hero-stats">
-                    <div class="hero-stat">
-                        <div class="hero-stat-value">61.2%</div>
-                        <div class="hero-stat-label">Football ATS</div>
-                    </div>
-                    <div class="hero-stat">
-                        <div class="hero-stat-value">56.1%</div>
-                        <div class="hero-stat-label">Basketball ATS</div>
-                    </div>
-                    <div class="hero-stat">
-                        <div class="hero-stat-value">2,700+</div>
-                        <div class="hero-stat-label">Games Analyzed</div>
-                    </div>
-                </div>
             </div>
             <div class="hero-logo-panel">
                 <img src="{{ url_for('static', filename='favicon.png') }}" alt="Statalysts Logo" class="hero-logo-img">
+            </div>
+        </div>
+    </section>
+
+    <section id="track-record" class="preview-section">
+        <div class="preview-content">
+            {% if highlights %}
+            <div class="rankings-container" style="margin-bottom: 2rem;">
+                {% for h in highlights %}
+                <div class="feature-card">
+                    <div class="feature-title">{{ h.sport|title }}</div>
+                    <div class="feature-description">{{ h.text }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="hero-stats" style="margin-bottom: 2.5rem;">
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{{ overall_record.total_picks }}</div>
+                    <div class="hero-stat-label">Games Graded</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{{ overall_record.straight_up_win_pct if overall_record.straight_up_win_pct is not none else '--' }}{% if overall_record.straight_up_win_pct is not none %}%{% endif %}</div>
+                    <div class="hero-stat-label">Straight-Up Accuracy</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{{ overall_record.ats_win_pct if overall_record.ats_win_pct is not none else '--' }}{% if overall_record.ats_win_pct is not none %}%{% endif %}</div>
+                    <div class="hero-stat-label">Recommended-Bet Win Rate ({{ overall_record.recommended_count }} bets)</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{{ '+' if overall_record.total_profit >= 0 else '' }}${{ overall_record.total_profit }}</div>
+                    <div class="hero-stat-label">Profit on $10 Flat Bets</div>
+                </div>
+            </div>
+
+            <h2 class="section-title">Track Record</h2>
+            <div class="rankings-section" style="margin-bottom: 2.5rem;">
+                <div class="rankings-header">
+                    <h2 class="rankings-title">Cumulative Profit &mdash; $10 on Every Recommended Bet</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="profitChart"></canvas>
+                </div>
+                {% if not overall_record.profit_series %}
+                <p class="section-subtitle" style="margin-top: 1rem;">No recommended bets have been settled yet &mdash; this fills in automatically as games are played and graded.</p>
+                {% endif %}
+            </div>
+
+            <div class="rankings-container">
+                <div class="rankings-section">
+                    <div class="rankings-header">
+                        <h2 class="rankings-title">Football</h2>
+                    </div>
+                    <div class="game-stats" style="padding: 1.5rem;">
+                        <div class="stat">
+                            <div class="stat-label">Graded Games</div>
+                            <div class="stat-value">{{ football_record.total_picks }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Straight-Up</div>
+                            <div class="stat-value">{{ football_record.straight_up_win_pct if football_record.straight_up_win_pct is not none else '--' }}{% if football_record.straight_up_win_pct is not none %}%{% endif %}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">ATS on Recommended Bets</div>
+                            <div class="stat-value">{{ football_record.ats_win_pct if football_record.ats_win_pct is not none else '--' }}{% if football_record.ats_win_pct is not none %}%{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rankings-section">
+                    <div class="rankings-header">
+                        <h2 class="rankings-title">Basketball</h2>
+                    </div>
+                    <div class="game-stats" style="padding: 1.5rem;">
+                        <div class="stat">
+                            <div class="stat-label">Graded Games</div>
+                            <div class="stat-value">{{ basketball_record.total_picks }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Straight-Up</div>
+                            <div class="stat-value">{{ basketball_record.straight_up_win_pct if basketball_record.straight_up_win_pct is not none else '--' }}{% if basketball_record.straight_up_win_pct is not none %}%{% endif %}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">ATS on Recommended Bets</div>
+                            <div class="stat-value">{{ basketball_record.ats_win_pct if basketball_record.ats_win_pct is not none else '--' }}{% if basketball_record.ats_win_pct is not none %}%{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -197,6 +273,7 @@
                         <h3>Subscribe to Unlock All Predictions</h3>
                         <p>Get access to daily predictions for both football and basketball with detailed edge analysis</p>
                         <a href="/login?tab=signup" class="btn btn-large btn-primary">Get Started - $5/month</a>
+                        <a href="/example" style="display: inline-block; margin-top: 1rem; color: var(--accent-blue); font-size: 0.9375rem;">Not ready to subscribe? See a worked example &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -471,6 +548,37 @@
             }
         });
     });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+    const profitSeries = {{ overall_record.profit_series | tojson }};
+    const profitCtx = document.getElementById('profitChart');
+    if (profitCtx) {
+        new Chart(profitCtx, {
+            type: 'line',
+            data: {
+                labels: profitSeries.map(p => p.date),
+                datasets: [{
+                    label: 'Cumulative profit ($)',
+                    data: profitSeries.map(p => p.profit),
+                    borderColor: '#4dabf7',
+                    backgroundColor: 'rgba(77, 171, 247, 0.1)',
+                    fill: true,
+                    tension: 0.15,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#a8b2c8', maxTicksLimit: 10 }, grid: { color: '#1a1f2e' } },
+                    y: { ticks: { color: '#a8b2c8' }, grid: { color: '#1a1f2e' } }
+                }
+            }
+        });
+    }
     </script>
 </body>
 </html>

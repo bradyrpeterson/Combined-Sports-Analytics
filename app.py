@@ -244,25 +244,47 @@ def index():
         # Get top 5 rankings for preview
         football_top5 = football_predictor.FBS_rankings.head(5).to_dict('records')
         basketball_top5 = basketball_predictor.D1_rankings.head(5).to_dict('records')
-        
-        return render_template('index.html', 
+
+        # Real track record for the homepage (falls back to empty record until picks are settled)
+        try:
+            overall_record = tracking.get_track_record(db)
+            football_record = tracking.get_track_record(db, sport="football")
+            basketball_record = tracking.get_track_record(db, sport="basketball")
+        except Exception as e:
+            print(f"Error loading track record: {e}")
+            overall_record = {"total_picks": 0, "straight_up_win_pct": None, "recommended_count": 0,
+                               "ats_win_pct": None, "profit_series": [], "total_profit": 0}
+            football_record = dict(overall_record)
+            basketball_record = dict(overall_record)
+
+        return render_template('index.html',
                              featured_pick=featured_pick,
                              football_top5=football_top5,
                              basketball_top5=basketball_top5,
                              has_games=len(basketball_preds) > 0 or len(football_preds) > 0,
                              user_logged_in=user_logged_in,
-                             user_email=user_email)
+                             user_email=user_email,
+                             overall_record=overall_record,
+                             football_record=football_record,
+                             basketball_record=basketball_record,
+                             highlights=MODEL_HIGHLIGHTS)
     except Exception as e:
         print(f"Error loading index: {e}")
         import traceback
         traceback.print_exc()
-        return render_template('index.html', 
-                             featured_pick=None, 
+        empty_record = {"total_picks": 0, "straight_up_win_pct": None, "recommended_count": 0,
+                         "ats_win_pct": None, "profit_series": [], "total_profit": 0}
+        return render_template('index.html',
+                             featured_pick=None,
                              football_top5=[],
                              basketball_top5=[],
                              has_games=False,
                              user_logged_in=user_logged_in,
-                             user_email=user_email)
+                             user_email=user_email,
+                             overall_record=empty_record,
+                             football_record=dict(empty_record),
+                             basketball_record=dict(empty_record),
+                             highlights=MODEL_HIGHLIGHTS)
 
 @app.route("/football")
 @login_required
@@ -403,6 +425,51 @@ def rankings():
                              football_rankings=[], 
                              basketball_rankings=[])
     
+@app.route("/example")
+def example():
+    """Public worked example of a football predictions page, using fictional games.
+
+    Exists so visitors can see exactly what the real /football page looks like and
+    how to read it, even in the off-season when there are no real games to show.
+    """
+    user_logged_in = False
+    if 'user_id' in session:
+        try:
+            user_doc = db.collection("users").document(session["user_id"]).get()
+            if user_doc.exists:
+                user_logged_in = user_doc.to_dict().get("status") == "active"
+        except:
+            pass
+    user_email = session.get('email', None)
+
+    sample_predictions = [
+        {
+            "home": "Ohio State", "away": "Michigan", "predicted_winner": "Ohio State",
+            "margin": 9.5, "betting_spread": -3.5, "spread_diff": 6.0,
+            "prob": 78.4, "neutral_site": False,
+        },
+        {
+            "home": "Texas", "away": "Oklahoma", "predicted_winner": "Texas",
+            "margin": 6.0, "betting_spread": -2.0, "spread_diff": 4.0,
+            "prob": 68.2, "neutral_site": False,
+        },
+        {
+            "home": "Georgia", "away": "Alabama", "predicted_winner": "Georgia",
+            "margin": 3.0, "betting_spread": -2.5, "spread_diff": 0.5,
+            "prob": 57.9, "neutral_site": False,
+        },
+        {
+            "home": "Notre Dame", "away": "USC", "predicted_winner": "Notre Dame",
+            "margin": 4.5, "betting_spread": None, "spread_diff": None,
+            "prob": 64.1, "neutral_site": True,
+        },
+    ]
+
+    return render_template('example.html',
+                         user_logged_in=user_logged_in,
+                         user_email=user_email,
+                         predictions=sample_predictions)
+
 @app.route("/football/custom")
 @login_required
 def football_custom():
@@ -510,6 +577,60 @@ stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID')
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET')
+
+# Manually-curated bragging-rights callouts for the homepage track-record section.
+# Fill these in yourself each season -- e.g. {"sport": "football", "text": "Ranked Ohio State #1 entering Week 1."}
+MODEL_HIGHLIGHTS = []
+
+# Track record: snapshot picks daily, settle them once games finish
+import tracking
+
+def run_daily_tracking_job():
+    try:
+        snapshotted = tracking.snapshot_todays_picks(
+            db,
+            football_predictor=football_predictor if FOOTBALL_AVAILABLE else None,
+            basketball_predictor=basketball_predictor if BASKETBALL_AVAILABLE else None,
+        )
+        settled = tracking.settle_pending_picks(
+            db,
+            football_predictor=football_predictor if FOOTBALL_AVAILABLE else None,
+            basketball_predictor=basketball_predictor if BASKETBALL_AVAILABLE else None,
+        )
+        print(f"[tracking] Snapshotted {snapshotted} new picks, settled {settled} picks")
+    except Exception as e:
+        print(f"[tracking] Daily job failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+    # Guard avoids double-scheduling under Flask's debug-mode reloader (which forks a child
+    # process with WERKZEUG_RUN_MAIN=true); gunicorn in production never sets this var, so the
+    # scheduler still starts there. Single gunicorn worker (see Procfile) keeps this to one job.
+    from apscheduler.schedulers.background import BackgroundScheduler
+
+    scheduler = BackgroundScheduler(timezone="America/New_York")
+    scheduler.add_job(run_daily_tracking_job, "cron", hour=6, minute=0)
+    scheduler.start()
+
+@app.route("/admin/settle-picks", methods=["POST"])
+def admin_settle_picks():
+    """Manually trigger the snapshot+settle job (testing/recovery). POST {"secret": "..."}"""
+    data = request.get_json(silent=True) or {}
+    if data.get("secret") != ADMIN_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    snapshotted = tracking.snapshot_todays_picks(
+        db,
+        football_predictor=football_predictor if FOOTBALL_AVAILABLE else None,
+        basketball_predictor=basketball_predictor if BASKETBALL_AVAILABLE else None,
+    )
+    settled = tracking.settle_pending_picks(
+        db,
+        football_predictor=football_predictor if FOOTBALL_AVAILABLE else None,
+        basketball_predictor=basketball_predictor if BASKETBALL_AVAILABLE else None,
+    )
+    return jsonify({"success": True, "snapshotted": snapshotted, "settled": settled}), 200
 
 
 @app.route("/payment-pending")
