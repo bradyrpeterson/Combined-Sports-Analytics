@@ -14,9 +14,7 @@
     <div class="top-bar">
         <div class="top-bar-content">
             <div class="season-info">Sample data &mdash; not a real game</div>
-            <div class="top-nav-links">
-                <a href="#pricing">Pricing</a>
-            </div>
+            <div class="top-nav-links"></div>
         </div>
     </div>
 
@@ -44,7 +42,7 @@
                 <a href="/logout" class="btn-logout">Log Out</a>
                 {% else %}
                 <a href="/login" class="btn-login">Log In</a>
-                <a href="/login?tab=signup" class="btn-subscribe">Subscribe - $5/mo</a>
+                <a href="/login?tab=signup" class="btn-subscribe">Sign Up Free</a>
                 {% endif %}
             </div>
         </div>
@@ -167,7 +165,7 @@
             {% if user_logged_in %}
             <a href="/football" class="btn btn-primary">View Real Predictions</a>
             {% else %}
-            <a href="/login?tab=signup" class="btn btn-primary">Get Access - $5/mo</a>
+            <a href="/login?tab=signup" class="btn btn-primary">Create Free Account</a>
             {% endif %}
         </div>
     </div>

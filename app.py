@@ -33,48 +33,22 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 def login_required(f):
+    """Gate on having an account only. The paid-tier gate (subscription status/expiration
+    checks) is dormant while access is free -- see /auth-callback, which now marks every
+    new account "active" on creation. The Stripe plumbing (checkout, webhook, billing
+    portal) is left in place, unused, for when a paid tier comes back."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
             if 'user_id' not in session:
                 return redirect('/login')
-            
-            # Check user status
-            user_ref = db.collection("users").document(session["user_id"])
-            user_doc = user_ref.get()
 
+            user_doc = db.collection("users").document(session["user_id"]).get()
             if not user_doc.exists:
                 return redirect(url_for('login'))
-            
-            user_data = user_doc.to_dict()
-            status = user_data.get("status", "pending")
-            expires = user_data.get("subscription_expires")
-            
-            # Check if active subscription has expired
-            is_free = user_data.get("is_free", False)
-            if status == "active" and expires and not is_free:
-                from datetime import timezone
-                now = datetime.now(timezone.utc)
-                
-                if isinstance(expires, datetime):
-                    if expires.tzinfo is None:
-                        expires = expires.replace(tzinfo=timezone.utc)
-                    
-                    if now > expires:
-                        user_ref.update({"status": "expired"})
-                        return redirect(url_for("payment_pending"))
-                
-                elif hasattr(expires, 'seconds'):
-                    expire_datetime = datetime.fromtimestamp(expires.seconds, tz=timezone.utc)
-                    if now > expire_datetime:
-                        user_ref.update({"status": "expired"})
-                        return redirect(url_for("payment_pending"))
-            
-            if status in ["pending", "expired"]:
-                return redirect(url_for("payment_pending"))
-            
+
             return f(*args, **kwargs)
-            
+
         except Exception as e:
             print(f"Error in login_required: {e}")
             import traceback
@@ -98,16 +72,17 @@ def auth_callback():
     user_doc = user_ref.get()
     
     if not user_doc.exists:
+        # Access is free right now -- every new account gets full access immediately.
         user_ref.set({
             "email": email,
-            "status": "pending",
+            "status": "active",
             "created_at": datetime.now(),
-            "approved_at": None,
+            "approved_at": datetime.now(),
             "subscription_expires": None
         })
-        status = "pending"
+        status = "active"
     else:
-        status = user_doc.to_dict().get("status", "pending")
+        status = user_doc.to_dict().get("status", "active")
 
     session["user_id"] = uid
     session["email"] = email

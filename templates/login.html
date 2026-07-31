@@ -87,7 +87,7 @@
       <!-- SIGNUP TAB -->
 <div id="signup-tab" class="auth-tab">
   <h2>Create Account</h2>
-  <p class="login-subtitle">Get access to premium predictions</p>
+  <p class="login-subtitle">Free full access to predictions and analytics</p>
 
   <div id="signup-error" class="error-message"></div>
 
@@ -105,7 +105,7 @@
       <input type="password" id="signup-password-confirm" required minlength="6" placeholder="Re-enter password">
     </div>
     <button type="submit" id="signup-btn" class="login-btn">
-      Create Account &amp; Subscribe — $5/mo
+      Create Account
     </button>
     <a href="/" class="back-link">← Back to Home</a>
   </form>
@@ -113,15 +113,6 @@
   <div class="loading-spinner" id="signup-spinner">
     <div class="spinner"></div>
     <p class="loading-spinner-text">Creating account...</p>
-  </div>
-
-  <div class="payment-info">
-    <ol>
-      <li>Create your account above</li>
-      <li>Complete $5/month Stripe checkout</li>
-      <li>Get instant access after payment</li>
-    </ol>
-    <p class="payment-note">Monthly subscription • Cancel anytime</p>
   </div>
 </div>
       </div>
@@ -185,12 +176,8 @@
     });
 
     if (response.ok) {
-      const data = await response.json();
-      
-      if (data.status === 'active') {
-        window.location.href = '/football';
-      }
-      // If not active, do nothing — let them see the login page
+      // Access is free right now -- any account with a session gets in.
+      window.location.href = '/football';
     }
   }
 });
@@ -285,12 +272,7 @@
         });
         
         if (response.ok) {
-    // Create a form and submit it to Stripe checkout
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = '/create-checkout-session';
-          document.body.appendChild(form);
-          form.submit();
+          window.location.href = '/football';
         } else {
           throw new Error('Account creation failed');
         }
