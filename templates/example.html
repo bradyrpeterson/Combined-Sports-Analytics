@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
     <title>How to Read a Prediction | Statalysts</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+{% from "_icons.html" import icon_lock %}
 <body>
     <div class="top-bar">
         <div class="top-bar-content">
@@ -28,17 +30,17 @@
                 <a href="/">Home</a>
                 {% if user_logged_in %}
                 <a href="/football">Football</a>
-                <a href="/basketball">Basketball</a>
+                <a href="/basketball">Basketball<span class="beta-tag">Beta</span></a>
                 <a href="/rankings">Rankings</a>
                 {% else %}
-                <a href="/login" class="nav-locked">Predictions 🔒</a>
-                <a href="/login" class="nav-locked">Rankings 🔒</a>
+                <a href="/login" class="nav-locked">Predictions {{ icon_lock(14) }}</a>
+                <a href="/login" class="nav-locked">Rankings {{ icon_lock(14) }}</a>
                 {% endif %}
                 <a href="/example" class="active">Example</a>
             </nav>
             <div class="header-actions">
                 {% if user_logged_in %}
-                <a href="/manage-subscription" class="user-badge" style="text-decoration: none;">Profile Information</a>
+                <a href="/manage-subscription" class="user-badge">Profile Information</a>
                 <a href="/logout" class="btn-logout">Log Out</a>
                 {% else %}
                 <a href="/login" class="btn-login">Log In</a>
@@ -56,7 +58,7 @@
     </div>
 
     <div class="content">
-        <div class="model-steps" style="margin-top: 0; margin-bottom: 2.5rem;">
+        <div class="model-steps compact">
             <div class="feature-card">
                 <div class="feature-title">Matchup</div>
                 <div class="feature-description">Away team on top, home team on bottom. Whichever team the model favors to win is highlighted.</div>
@@ -160,7 +162,7 @@
             </div>
         </div>
 
-        <div class="featured-cta" style="margin-top: 2.5rem;">
+        <div class="featured-cta">
             <p>That's it &mdash; that's exactly what the real predictions page looks like, just with real games once the season is live.</p>
             {% if user_logged_in %}
             <a href="/football" class="btn btn-primary">View Real Predictions</a>

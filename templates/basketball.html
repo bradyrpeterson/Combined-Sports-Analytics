@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
     <title>College Basketball Predictions | Statalysts</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+{% from "_icons.html" import icon_basketball %}
 <body>
     <div class="top-bar">
         <div class="top-bar-content">
@@ -27,19 +29,19 @@
             <nav class="main-nav">
                 <a href="/">Home</a>
                 <a href="/football">Football</a>
-                <a href="/basketball" class="active">Basketball</a>
+                <a href="/basketball" class="active">Basketball<span class="beta-tag">Beta</span></a>
                 <a href="/rankings">Rankings</a>
                 <a href="/example">Example</a>
             </nav>
             <div class="header-actions">
-                <a href="/manage-subscription" class="user-badge" style="text-decoration: none;">Profile Information</a>
+                <a href="/manage-subscription" class="user-badge">Profile Information</a>
             </div>
         </div>
     </header>
 
     <div class="page-header">
         <div class="page-header-content">
-            <h1 class="page-title">College Basketball Predictions</h1>
+            <h1 class="page-title">College Basketball Predictions<span class="beta-tag">Beta</span></h1>
             <p class="page-subtitle">Machine learning powered spread predictions with 56.1% ATS accuracy</p>
         </div>
     </div>
@@ -65,7 +67,7 @@
     <div class="content">
         {% if predictions|length == 0 %}
         <div class="empty-state">
-            <div class="empty-icon">🏀</div>
+            <div class="empty-icon">{{ icon_basketball() }}</div>
             <h2 class="empty-title">No Games Scheduled Today</h2>
             <p class="empty-text">Check back tomorrow for new predictions</p>
         </div>

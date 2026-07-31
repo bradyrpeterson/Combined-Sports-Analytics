@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
     <title>Terms & Conditions | Statalysts</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -63,6 +64,10 @@
             font-weight: 700;
             margin-bottom: 10px;
         }
+        .highlight-box h3 svg {
+            vertical-align: -3px;
+            margin-right: 0.4rem;
+        }
         .highlight-box p {
             color: #fca5a5;
             margin-bottom: 0;
@@ -79,8 +84,15 @@
         .back-link a:hover {
             text-decoration: underline;
         }
+        .terms-section a {
+            color: #3b82f6;
+        }
+        .terms-section a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
+{% from "_icons.html" import icon_warning %}
 <body>
     <div class="top-bar">
         <div class="top-bar-content">
@@ -116,7 +128,7 @@
         </div>
 
         <div class="highlight-box">
-            <h3>⚠️ Important Disclaimer</h3>
+            <h3>{{ icon_warning() }}Important Disclaimer</h3>
             <p>Statalysts is not a guarantee. We are not responsible for any financial losses incurred from using our predictions. Sports betting involves significant risk, and you should never wager more than you can afford to lose.</p>
         </div>
 
@@ -167,7 +179,7 @@
             <p>Resources for problem gambling:</p>
             <ul>
                 <li>National Council on Problem Gambling: 1-800-522-4700</li>
-                <li>Gamblers Anonymous: <a href="https://www.gamblersanonymous.org" style="color: #3b82f6;">www.gamblersanonymous.org</a></li>
+                <li>Gamblers Anonymous: <a href="https://www.gamblersanonymous.org">www.gamblersanonymous.org</a></li>
             </ul>
         </div>
 

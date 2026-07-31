@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
     <title>Custom Football Prediction | Statalysts</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -29,12 +30,12 @@
             <nav class="main-nav">
                 <a href="/">Home</a>
                 <a href="/football">Football</a>
-                <a href="/basketball">Basketball</a>
+                <a href="/basketball">Basketball<span class="beta-tag">Beta</span></a>
                 <a href="/rankings">Rankings</a>
                 <a href="/example">Example</a>
             </nav>
             <div class="header-actions">
-                <a href="/manage-subscription" class="user-badge" style="text-decoration: none;">Profile Information</a>
+                <a href="/manage-subscription" class="user-badge">Profile Information</a>
             </div>
         </div>
     </header>
@@ -119,7 +120,7 @@
                 </div>
             </div>
 
-            <div style="text-align: center; margin-top: 2rem;">
+            <div class="predictor-back-link">
                 <a href="/football" class="btn btn-secondary">Back to Predictions</a>
             </div>
         </div>

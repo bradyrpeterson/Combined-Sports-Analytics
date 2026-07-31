@@ -475,7 +475,8 @@ def example():
 def football_custom():
     """Custom football matchup predictor (LOGIN REQUIRED)"""
     try:
-        teams = sorted(football_predictor.ratings.index.tolist())
+        fbs_teams = set(football_predictor.fbs_teams)
+        teams = sorted(t for t in football_predictor.ratings.index if t in fbs_teams)
         return render_template('football_custom.html', teams=teams)
     except Exception as e:
         print(f"Error: {e}")
@@ -486,7 +487,8 @@ def football_custom():
 def basketball_custom():
     """Custom basketball matchup predictor (LOGIN REQUIRED)"""
     try:
-        teams = sorted(basketball_predictor.ratings.index.tolist())
+        d1_teams = set(basketball_predictor.d1_teams)
+        teams = sorted(t for t in basketball_predictor.ratings.index if t in d1_teams)
         return render_template('basketball_custom.html', teams=teams)
     except Exception as e:
         print(f"Error: {e}")
@@ -816,6 +818,15 @@ def admin_grant_access():
         user_doc.reference.update(update_data)
 
     return jsonify({"success": True, "message": f"Access granted to {email}"}), 200
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("404.html"), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template("500.html"), 500
+
 if __name__ == "__main__":
     print("=" * 80)
     print("SPORTS ANALYTICS HUB - COMPLETELY FIXED VERSION")

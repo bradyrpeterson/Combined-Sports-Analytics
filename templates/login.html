@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
   <title>Login - Statalysts</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
@@ -72,7 +73,7 @@
 
         <div class="loading-spinner" id="login-spinner">
           <div class="spinner"></div>
-          <p style="margin-top: 15px; color: #666;">Signing in...</p>
+          <p class="loading-spinner-text">Signing in...</p>
         </div>
 
         <p class="info-text">
@@ -103,26 +104,15 @@
       <label for="signup-password-confirm">Confirm Password</label>
       <input type="password" id="signup-password-confirm" required minlength="6" placeholder="Re-enter password">
     </div>
-    <button type="submit" id="signup-btn" style="
-      width: 100%;
-      padding: 1rem;
-      background: #4dabf7;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-    ">
-      Create Account & Subscribe — $5/mo
+    <button type="submit" id="signup-btn" class="login-btn">
+      Create Account &amp; Subscribe — $5/mo
     </button>
     <a href="/" class="back-link">← Back to Home</a>
   </form>
 
   <div class="loading-spinner" id="signup-spinner">
     <div class="spinner"></div>
-    <p style="margin-top: 15px; color: #666;">Creating account...</p>
+    <p class="loading-spinner-text">Creating account...</p>
   </div>
 
   <div class="payment-info">
