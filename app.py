@@ -100,7 +100,7 @@ try:
     from football import predictor as football_predictor
     
     football_dir = os.path.join(os.path.dirname(__file__), 'football')
-    with open(os.path.join(football_dir, "fbs_teams_2025.json"), "r") as f:
+    with open(os.path.join(football_dir, "fbs_teams_2026.json"), "r") as f:
         football_teams = json.load(f)
     with open(os.path.join(football_dir, "team_logos.json"), "r") as f:
         football_logos = json.load(f)
@@ -318,16 +318,18 @@ def football():
                              predictions=predictions,
                              selected_week=week,
                              conferences=conferences,
-                             selected_conference=conference)
+                             selected_conference=conference,
+                             team_logos=football_logos)
     except Exception as e:
         print(f"Error loading football: {e}")
         import traceback
         traceback.print_exc()
-        return render_template('football.html', 
-                             predictions=[], 
+        return render_template('football.html',
+                             predictions=[],
                              conferences=football_conferences,
                              selected_week=str(football_predictor.next_week) if FOOTBALL_AVAILABLE else "1",
-                             selected_conference="All")
+                             selected_conference="All",
+                             team_logos=football_logos)
 
 @app.route("/basketball")
 @login_required

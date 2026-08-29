@@ -13,7 +13,7 @@
 <body>
     <div class="top-bar">
         <div class="top-bar-content">
-            <div class="season-info">2025 College Football Season</div>
+            <div class="season-info">2026 College Football Season</div>
             <div class="top-nav-links">
                 <a href="/logout">Log Out</a>
             </div>
@@ -58,6 +58,12 @@
                 </select>
             </div>
 
+            <div class="sort-toggle" role="tablist" aria-label="Sort predictions">
+                <div class="sort-toggle-thumb" id="sort-toggle-thumb"></div>
+                <button type="button" class="sort-toggle-option active" data-mode="edge" onclick="setSortMode('edge')" role="tab" aria-selected="true">Sort by Edge</button>
+                <button type="button" class="sort-toggle-option" data-mode="time" onclick="setSortMode('time')" role="tab" aria-selected="false">Sort by Time</button>
+            </div>
+
             <div class="model-toggle">
                 <a href="/football/custom" class="btn btn-secondary">Custom Matchup</a>
             </div>
@@ -76,6 +82,7 @@
             <thead>
                 <tr>
                     <th>Matchup</th>
+                    <th>Kickoff</th>
                     <th>Model Spread</th>
                     <th>Vegas Line</th>
                     <th>Edge</th>
@@ -84,19 +91,30 @@
             </thead>
             <tbody>
                 {% for pred in predictions %}
-                <tr class="{% if pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 3 %}edge-medium{% else %}edge-low{% endif %}">
+                <tr class="{% if pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 3 %}edge-medium{% else %}edge-low{% endif %}"
+                    data-edge="{{ pred.spread_diff|abs if pred.spread_diff is not none else -1 }}"
+                    data-kickoff="{{ pred.kickoff_iso or '' }}">
                     <td>
                         <div class="matchup-cell">
                             <div class="team-cell {% if pred.predicted_winner == pred.away %}team-predicted{% endif %}">
+                                {% if team_logos.get(pred.away) %}<img src="{{ team_logos[pred.away] }}" class="team-logo" alt="">{% endif %}
                                 {{ pred.away }}
                             </div>
                             <div class="vs-separator">@</div>
                             <div class="team-cell {% if pred.predicted_winner == pred.home %}team-predicted{% endif %}">
+                                {% if team_logos.get(pred.home) %}<img src="{{ team_logos[pred.home] }}" class="team-logo" alt="">{% endif %}
                                 {{ pred.home }}
                             </div>
                             {% if pred.neutral_site %}
                             <div class="neutral-indicator">(Neutral Site)</div>
                             {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="kickoff-cell">
+                            <div class="kickoff-date">{{ pred.game_date_display or "TBD" }}</div>
+                            {% if pred.game_time_display %}<div class="kickoff-time">{{ pred.game_time_display }}</div>{% endif %}
+                            {% if pred.location %}<div class="kickoff-location">{{ pred.location }}</div>{% endif %}
                         </div>
                     </td>
                     <td>
@@ -205,6 +223,37 @@
             window.location.href = '/football?conference=' + conf;
         }
 
+        function sortPredictions(mode) {
+            const tbody = document.querySelector('.predictions-table tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort(function(a, b) {
+                if (mode === 'time') {
+                    const ta = a.dataset.kickoff ? new Date(a.dataset.kickoff).getTime() : Infinity;
+                    const tb = b.dataset.kickoff ? new Date(b.dataset.kickoff).getTime() : Infinity;
+                    return ta - tb;
+                }
+                // Edge: highest absolute edge first, games with no line last
+                const ea = parseFloat(a.dataset.edge);
+                const eb = parseFloat(b.dataset.edge);
+                return eb - ea;
+            });
+
+            rows.forEach(function(row) { tbody.appendChild(row); });
+        }
+
+        function setSortMode(mode) {
+            document.querySelectorAll('.sort-toggle-option').forEach(function(btn) {
+                const active = btn.dataset.mode === mode;
+                btn.classList.toggle('active', active);
+                btn.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            const thumb = document.getElementById('sort-toggle-thumb');
+            if (thumb) thumb.classList.toggle('is-time', mode === 'time');
+            sortPredictions(mode);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.confidence-fill-small').forEach(function(el) {
                 var width = el.getAttribute('data-width');
@@ -212,6 +261,9 @@
                     el.style.width = width + '%';
                 }
             });
+
+            // Default view: sorted by edge so the strongest value opportunities are on top
+            sortPredictions('edge');
         });
     </script>
 </body>

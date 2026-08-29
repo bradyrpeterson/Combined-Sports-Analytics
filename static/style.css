@@ -2567,8 +2567,91 @@ a {
 
 /* Team names in table */
 .team-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: 600;
     color: var(--text-primary);
+}
+
+.team-logo {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* Kickoff date/time/location cell */
+.kickoff-cell {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.kickoff-date {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.kickoff-time {
+    color: var(--text-secondary);
+}
+
+.kickoff-location {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+}
+
+/* Sort-by toggle (Edge / Time) */
+.sort-toggle {
+    position: relative;
+    display: inline-flex;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-hover);
+    border-radius: 999px;
+    padding: 4px;
+}
+
+.sort-toggle-thumb {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--accent-blue);
+    border-radius: 999px;
+    transition: transform 0.25s ease;
+}
+
+.sort-toggle-thumb.is-time {
+    transform: translateX(100%);
+}
+
+.sort-toggle-option {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 999px;
+    transition: color 0.25s ease;
+}
+
+.sort-toggle-option.active {
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .sort-toggle {
+        width: 100%;
+    }
+    .sort-toggle-option {
+        flex: 1;
+    }
 }
 
 .team-predicted {
