@@ -65,6 +65,17 @@
         </div>
     </section>
 
+    {% if not football_model_fully_trained %}
+    <div class="preview-content">
+        <div class="model-training-notice">
+            <span class="model-training-notice-icon">⚠️</span>
+            <div class="model-training-notice-text">
+                <strong>Football model still warming up.</strong> Not enough of this season's games have been played yet, so ratings are still leaning on preseason projections and last season's results. 
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <section id="track-record" class="preview-section">
         <div class="preview-content">
             {% if highlights %}

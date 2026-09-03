@@ -242,7 +242,8 @@ def index():
                              overall_record=overall_record,
                              football_record=football_record,
                              basketball_record=basketball_record,
-                             highlights=MODEL_HIGHLIGHTS)
+                             highlights=MODEL_HIGHLIGHTS,
+                             football_model_fully_trained=football_predictor.model_fully_trained)
     except Exception as e:
         print(f"Error loading index: {e}")
         import traceback
@@ -259,7 +260,8 @@ def index():
                              overall_record=empty_record,
                              football_record=dict(empty_record),
                              basketball_record=dict(empty_record),
-                             highlights=MODEL_HIGHLIGHTS)
+                             highlights=MODEL_HIGHLIGHTS,
+                             football_model_fully_trained=getattr(football_predictor, 'model_fully_trained', True) if FOOTBALL_AVAILABLE else True)
 
 @app.route("/football")
 @login_required
@@ -319,7 +321,9 @@ def football():
                              selected_week=week,
                              conferences=conferences,
                              selected_conference=conference,
-                             team_logos=football_logos)
+                             team_logos=football_logos,
+                             model_fully_trained=football_predictor.model_fully_trained,
+                             weeks_completed=football_predictor.weeks_completed)
     except Exception as e:
         print(f"Error loading football: {e}")
         import traceback
@@ -329,7 +333,9 @@ def football():
                              conferences=football_conferences,
                              selected_week=str(football_predictor.next_week) if FOOTBALL_AVAILABLE else "1",
                              selected_conference="All",
-                             team_logos=football_logos)
+                             team_logos=football_logos,
+                             model_fully_trained=getattr(football_predictor, 'model_fully_trained', True) if FOOTBALL_AVAILABLE else True,
+                             weeks_completed=getattr(football_predictor, 'weeks_completed', 0) if FOOTBALL_AVAILABLE else 0)
 
 @app.route("/basketball")
 @login_required

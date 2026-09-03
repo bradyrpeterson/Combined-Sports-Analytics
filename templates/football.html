@@ -71,6 +71,14 @@
     </div>
 
     <div class="content">
+        {% if not model_fully_trained %}
+        <div class="model-training-notice">
+            <span class="model-training-notice-icon">⚠️</span>
+            <div class="model-training-notice-text">
+                <strong>Model still warming up.</strong> Only {{ weeks_completed }} week{{ 's' if weeks_completed != 1 else '' }} of this season's games {{ 'has' if weeks_completed == 1 else 'have' }} been played so far, so ratings are still leaning heavily on preseason projections and last season's results rather than this year's actual results.
+            </div>
+        </div>
+        {% endif %}
         {% if predictions|length == 0 %}
         <div class="empty-state">
             <div class="empty-icon">{{ icon_football() }}</div>

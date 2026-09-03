@@ -333,6 +333,13 @@ def train_prediction_model():
 # Train the prediction model when predictor loads
 prediction_model = train_prediction_model()
 
+#How many weeks of this season's own games we want in hand before trusting
+#predictions enough to count them toward the tracked recommended record --
+#below this, ratings are still mostly the preseason SP+/last-year prior
+#(see PRIOR_DECAY_K above), not this season's actual results.
+MODEL_FULLY_TRAINED_MIN_WEEKS = 4
+model_fully_trained = weeks_completed >= MODEL_FULLY_TRAINED_MIN_WEEKS and prediction_model is not None
+
 #Prediciton function
 def predict_game(home, away, neutral_site=False):
     rating_diff = ratings[home] - ratings[away]
@@ -504,7 +511,18 @@ def get_upcoming_predictions(week=None,conference=None):
                 # Calculate the actual difference for display
                 betting_margin = -betting_spread
                 spread_diff = round(margin - betting_margin, 1)
-            
+
+            # While the model is still mostly running on the preseason prior
+            # (not enough of this season's own games yet -- see
+            # model_fully_trained above), don't let these picks count toward
+            # the tracked recommended record. tracking.py only counts a
+            # snapshotted pick as "recommended" when edge_class is set, so
+            # forcing it to None here is what keeps it out of that tally --
+            # the game still shows on the page with its edge highlighted,
+            # it just isn't graded.
+            if not model_fully_trained:
+                edge_class = None
+
             game_date = pd.to_datetime(game.get("startDate"), utc=True, errors="coerce")
             game_date_et = game_date.tz_convert("America/New_York") if pd.notna(game_date) else None
             is_tbd = bool(game.get("startTimeTBD", False))
