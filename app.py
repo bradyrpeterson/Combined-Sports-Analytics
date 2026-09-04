@@ -32,6 +32,23 @@ if not firebase_admin._apps:
 # Initialize Firestore DB
 db = firestore.client()
 
+def refresh_predictors():
+    """Re-pull data from CFBD/CBBD and retrain both models. Called at the top of
+    every page that shows predictions so the site reflects final scores and new
+    games on every visit instead of only whenever the process last restarted.
+    Each predictor's own refresh() throttles itself, so calling this from
+    multiple routes in the same few seconds is cheap."""
+    if FOOTBALL_AVAILABLE:
+        try:
+            football_predictor.refresh()
+        except Exception as e:
+            print(f"Error refreshing football predictor: {e}")
+    if BASKETBALL_AVAILABLE:
+        try:
+            basketball_predictor.refresh()
+        except Exception as e:
+            print(f"Error refreshing basketball predictor: {e}")
+
 def login_required(f):
     """Gate on having an account only. The paid-tier gate (subscription status/expiration
     checks) is dormant while access is free -- see /auth-callback, which now marks every
@@ -146,8 +163,10 @@ def index():
         except:
             pass
     user_email = session.get('email', None)
-    
+
     try:
+        refresh_predictors()
+
         # Get today's basketball games
         basketball_preds = basketball_predictor.get_upcoming_predictions()
         
@@ -268,6 +287,8 @@ def index():
 def football():
     """Football predictions page (LOGIN REQUIRED)"""
     try:
+        refresh_predictors()
+
         week = request.args.get("week", str(football_predictor.next_week))
         conference = request.args.get("conference", "All")
         
@@ -342,8 +363,10 @@ def football():
 def basketball():
     """Basketball predictions page (LOGIN REQUIRED)"""
     try:
+        refresh_predictors()
+
         conference = request.args.get("conference", "All")
-        
+
         predictions_df = basketball_predictor.get_upcoming_predictions(
             conference=conference if conference != "All" else None
         )
@@ -396,6 +419,8 @@ def basketball():
 def rankings():
     """Rankings page (LOGIN REQUIRED)"""
     try:
+        refresh_predictors()
+
         football_rankings = football_predictor.FBS_rankings.head(25).to_dict('records')
         basketball_rankings = basketball_predictor.D1_rankings.head(25).to_dict('records')
         
@@ -458,6 +483,7 @@ def example():
 def football_custom():
     """Custom football matchup predictor (LOGIN REQUIRED)"""
     try:
+        refresh_predictors()
         fbs_teams = set(football_predictor.fbs_teams)
         teams = sorted(t for t in football_predictor.ratings.index if t in fbs_teams)
         return render_template('football_custom.html', teams=teams)
@@ -470,6 +496,7 @@ def football_custom():
 def basketball_custom():
     """Custom basketball matchup predictor (LOGIN REQUIRED)"""
     try:
+        refresh_predictors()
         d1_teams = set(basketball_predictor.d1_teams)
         teams = sorted(t for t in basketball_predictor.ratings.index if t in d1_teams)
         return render_template('basketball_custom.html', teams=teams)
