@@ -22,41 +22,53 @@ headers = {"Authorization": f"Bearer {api_key}"}
 with open("football/fbs_teams_2026.json", "r") as f:
     fbs_teams = json.load(f)
 
-_raw_stat_cols = ["team", "totalYards", "rushingAttempts", "passAttempts",
-                  "totalYardsOpponent", "rushingAttemptsOpponent", "passAttemptsOpponent",
-                  "thirdDownConversions", "thirdDowns", "turnoversOpponent", "turnovers"]
-
 need_cols = ["season","seasonType","week","startDate","startTimeTBD","venue","venueId",
              "homeTeam","awayTeam","homePoints","awayPoints","homeConference","awayConference","neutralSite"]
 
-#--- Preseason prior weighting ----------------------------------------------
-#The prior itself is a 50/50 blend of SP+ (this year's advanced-metric
-#projection) and our own rating regression run on last season's complete
-#results. Backtested across 2022-2025: an even blend of the two beat using
-#either alone in every single season tested (e.g. weeks-1-4 MAE of 14.2 for
-#the 50/50 blend vs 17.3 for SP+ alone and 15.1 for our own model alone).
-#SP+ alone actually did worse than expected early on -- it's a whole-season
-#average, so a team that starts slow and turns it on in October drags that
-#average away from what actually happened in week 1. Our own model doesn't
-#share that blind spot, so combining the two cancels out some of each one's
-#individual misses rather than just being "a little of both for variety."
+#--- Preseason prior --------------------------------------------------------
+#A 50/50 blend of SP+ and our own rating regression on last season's results.
+#Measured over 2022-2025 weeks 1-4 (research/model_backtest/early_backtest.py):
+#the blend gave MAE 13.88 vs 14.25 for SP+ alone and 13.93 for last-year alone.
+#The margin over last-year-alone is slim, and that test used the PRIOR season's
+#final SP+ rather than a true preseason projection (using same-season SP+ in a
+#backtest would leak the season being predicted), so it understates what SP+
+#contributes here -- live, CFBD serves an actual preseason projection.
 SP_PLUS_WEIGHT = 0.5
 OWN_MODEL_WEIGHT = 0.5
 
-#Now fade the (already-blended) prior into this season's own results as
-#harmonic_k / (harmonic_k + weeks_completed). This decay schedule was picked
-#the same way: it beat every other schedule tried (hard cutoffs, static
-#blends, faster/slower linear decays) both early in the season AND well past
-#week 4 -- with only this year's games, the ratings regression above stays
-#noisy for a lot longer than 4 weeks because most FBS teams have only played
-#a handful of common opponents by then. The weight never truly reaches zero
-#(~0.6 at week 4, ~0.3 by week 12) -- forcing it to zero sooner tested worse
-#in every season checked.
-PRIOR_DECAY_K = 6  # weight = k / (k + weeks_completed); tuned via backtest
+#--- How this season's results move a team off its prior --------------------
+#Ratings are a Massey point-margin regression fit with ridge shrinkage toward
+#the preseason prior above, i.e. minimising ||y - Xb||^2 + LAMBDA*||b - prior||^2.
+#With no games played this returns the prior exactly; as results accumulate it
+#converges on the ordinary Massey fit.
+#
+#This replaces a global prior/in-season blend weight. The distinction matters:
+#a blend weight extends the same trust to every team's record regardless of
+#whether that team's schedule can actually support an estimate yet, whereas
+#ridge shrinkage is per-team and proportional to that team's own evidence.
+#Early in the season there are far more teams than games, so the unshrunk
+#regression is underdetermined and returns arbitrary values -- that is what
+#produced ratings like a 25-point home-field advantage, and predictions on the
+#wrong side of games the market had as three-score blowouts.
+#
+#LAMBDA was swept over 2022-2025 (research/model_backtest/sweep_lambda.py).
+#Values of 2-4 were jointly optimal in weeks 1-4 AND weeks 5+ -- there was no
+#early/late tradeoff to split. It also agrees with the value theory suggests,
+#(margin noise variance)/(prior error variance) ~= 13^2/7^2 ~= 3.5. Caveat: the
+#sweep was tuned and evaluated on the same four seasons.
+RIDGE_TO_PRIOR_LAMBDA = 3.0
 
-#How many weeks of this season's own games we want in hand before trusting
-#predictions enough to count them toward the tracked recommended record --
-#below this, ratings are still mostly the preseason SP+/last-year prior.
+#Home field is pinned rather than re-fit. On small samples it is not separately
+#identifiable from team strength, and re-fitting it weekly produced values as
+#absurd as 25 points. 2.5 is the long-run college-football figure.
+HOME_FIELD_ADVANTAGE = 2.5
+
+#Weeks of this season's results needed before betting edges are published.
+#Predictions themselves are shown from week 1 -- straight-up accuracy in weeks
+#1-4 measured 74.7%, actually higher than weeks 5+ (70.6%), because early
+#schedules carry more mismatches. Against the spread is the opposite story:
+#weeks 1-4 graded 47.4% ATS versus 50.1% later, so early edges are not worth
+#publishing even though the predictions are.
 MODEL_FULLY_TRAINED_MIN_WEEKS = 4
 
 #Don't hit the CFBD API more than once per this many seconds -- refresh() is
@@ -111,92 +123,43 @@ def _fit_team_ratings(games_df):
     return r, hf
 
 
-def train_prediction_model(completed, ratings, stats_clean, fbs_teams):
+def _fit_ridge_to_prior(games_df, prior, lam=RIDGE_TO_PRIOR_LAMBDA):
+    """Massey point-margin regression shrunk toward `prior` rather than toward zero.
+
+    Minimises ||y - Xb||^2 + lam*||b - prior||^2, so a team only moves off its
+    preseason rating to the extent its own results argue for it. With no games
+    played this returns the prior unchanged; with a full season it converges on
+    the ordinary Massey fit. Home field is held fixed rather than fit, so `y` is
+    the observed margin with home field already subtracted out.
     """
-    Train ML model to learn optimal weights from historical data.
-    Called fresh by load_data() every refresh so it always fits this
-    season's latest results.
-    """
+    if len(games_df) == 0:
+        return prior.copy()
 
-    features = []
-    targets = []
+    teams = sorted(set(games_df["homeTeam"]).union(games_df["awayTeam"]))
+    index = {t: i for i, t in enumerate(teams)}
+    X = np.zeros((len(games_df), len(teams)))
+    y = np.zeros(len(games_df))
+    for i, (_, row) in enumerate(games_df.iterrows()):
+        X[i, index[row["homeTeam"]]] = 1.0
+        X[i, index[row["awayTeam"]]] = -1.0
+        hfa = 0.0 if row.get("neutralSite", False) else HOME_FIELD_ADVANTAGE
+        y[i] = (row["homePoints"] - row["awayPoints"]) - hfa
 
-    for _, game in completed.iterrows():
-        home = game['homeTeam']
-        away = game['awayTeam']
-        margin = game['homePoints'] - game['awayPoints']
-        neutral = game.get('neutralSite', False)
+    #Non-FBS opponents appear on schedules but have no prior entry -- start them
+    #at 0 (an average team) and let their results move them from there.
+    p = prior.reindex(teams).fillna(0.0).values
+    delta = np.linalg.solve(X.T @ X + lam * np.eye(len(teams)), X.T @ (y - X @ p))
 
-        # Skip if missing data
-        if home not in ratings.index or away not in ratings.index:
-            continue
-        if home not in stats_clean['team'].values or away not in stats_clean['team'].values:
-            continue
-        # Skip non-FBS opponents -- lopsided "buy games" would teach the
-        # model the wrong thing about what a given rating gap actually means.
-        if home not in fbs_teams or away not in fbs_teams:
-            continue
-
-        # Get features
-        h_stats = stats_clean[stats_clean['team'] == home].iloc[0]
-        a_stats = stats_clean[stats_clean['team'] == away].iloc[0]
-
-        rating_diff = ratings[home] - ratings[away]
-        ypp_diff = h_stats['yardsPerPlay_off'] - a_stats['yardsPerPlay_def']
-        third_diff = h_stats['thirdDownPct'] - a_stats['thirdDownPct']
-        to_diff = h_stats['turnoverMargin'] - a_stats['turnoverMargin']
-        hc = 0 if neutral else 1
-
-        # Skip if NaN
-        if pd.isna([rating_diff, ypp_diff, third_diff, to_diff]).any():
-            continue
-
-        feature_vector = [
-            rating_diff,
-            ypp_diff,
-            third_diff,
-            to_diff,
-            hc,
-            ratings[home],
-            ratings[away],
-            h_stats['yardsPerPlay_off'],
-            a_stats['yardsPerPlay_off'],
-            h_stats['yardsPerPlay_def'],
-            a_stats['yardsPerPlay_def']
-        ]
-
-        features.append(feature_vector)
-        targets.append(margin)
-
-    if len(features) == 0:
-        # No games yet have both a result and stats to train on (e.g. stats
-        # haven't been published this early in the season) -- nothing to fit.
-        return None
-
-    X = np.array(features)
-    y = np.array(targets)
-
-    # Remove any NaN rows (safety check)
-    nan_mask = np.isnan(X).any(axis=1)
-    if nan_mask.sum() > 0:
-        X = X[~nan_mask]
-        y = y[~nan_mask]
-
-    if len(X) == 0:
-        return None
-
-    # Train model
-    ml_model = LinearRegression()
-    ml_model.fit(X, y)
-
-    return ml_model
+    ratings = prior.reindex(prior.index.union(teams)).fillna(0.0)
+    ratings.loc[teams] = p + delta
+    return ratings
 
 
 def load_data():
-    """Fetch everything fresh from CFBD (games, venues, SP+, last season, box-score
-    stats, betting-relevant metadata) and retrain the model on it. This is the
-    entire body of what used to run once at import time -- now it's callable, so
-    refresh() can re-run it on every page load instead of only on process start."""
+    """Fetch everything fresh from CFBD (games, venues, SP+, last season) and refit
+    the ratings on it. This is the entire body of what used to run once at import
+    time -- now it's callable, so refresh() can re-run it on every page load
+    instead of only on process start."""
     with cfbd.ApiClient(configuration) as api_client:
         api_instance = cfbd.GamesApi(api_client)
         games = api_instance.get_games(year=2026)
@@ -218,9 +181,7 @@ def load_data():
             sp_plus = []
 
         #Last season's own completed games -- the other half of the preseason
-        #prior (see PRESEASON PRIOR below). Backtested against using SP+ alone
-        #across 2022-2025: blending in our own last-year rating beat SP+ alone
-        #(and beat our own model alone) in every one of those seasons.
+        #prior (see PRESEASON PRIOR at the top of this file).
         try:
             last_season_games = cfbd.GamesApi(api_client).get_games(year=2025)
             last_season_fbs = [t.school for t in cfbd.TeamsApi(api_client).get_fbs_teams(year=2025)]
@@ -235,37 +196,6 @@ def load_data():
         city_state = ", ".join(p for p in [v.get("city"), v.get("state")] if p)
         if v.get("id") is not None and city_state:
             venue_location[v["id"]] = city_state
-
-    #Using requests pull all the statistical data from the data set
-    stats_url = "https://api.collegefootballdata.com/stats/season?year=2026"
-    #Convert the API response into a json then a dataframe for easy use
-    stats_response = requests.get(stats_url, headers=headers)
-    stats_data = stats_response.json()
-
-    #CFBD's season-stats aggregate lags kickoff by a day or more, so early in the
-    #season (or before it starts) this comes back with zero rows. Fall back to an
-    #empty frame with the right columns instead of crashing the pivot below --
-    #get_upcoming_predictions already skips any game missing stats, so games just
-    #don't show up until real stats are published.
-    if stats_data:
-        stats_df = pd.DataFrame(stats_data)
-        #Reshape stats to have one row per team
-        stats_wide = stats_df.pivot(index="team", columns="statName", values="statValue").reset_index()
-        for _col in _raw_stat_cols:
-            if _col not in stats_wide.columns:
-                stats_wide[_col] = np.nan
-    else:
-        stats_wide = pd.DataFrame(columns=_raw_stat_cols)
-
-    # Create efficiency stats using the dataset
-    stats_wide["yardsPerPlay_off"] = stats_wide["totalYards"] / (stats_wide["rushingAttempts"] + stats_wide["passAttempts"])
-    stats_wide["yardsPerPlay_def"] = stats_wide["totalYardsOpponent"] / (stats_wide["rushingAttemptsOpponent"] + stats_wide["passAttemptsOpponent"])
-    stats_wide["thirdDownPct"] = stats_wide["thirdDownConversions"] / stats_wide["thirdDowns"]
-    stats_wide["turnoverMargin"] = stats_wide["turnoversOpponent"] - stats_wide["turnovers"]
-
-    # Keep only the stats/columns that I plan on using
-    useful = ["team", "yardsPerPlay_off", "yardsPerPlay_def", "thirdDownPct", "turnoverMargin"]
-    stats_clean = stats_wide[useful]
 
     #Each game is turned into a dictionary then into a dataframe
     df = pd.DataFrame([g.to_dict() for g in games])
@@ -290,13 +220,7 @@ def load_data():
     completed = completed.copy()
     completed["margin"] = completed["homePoints"] - completed["awayPoints"]
 
-    #Early in the season (or before it starts) there may be zero completed FBS
-    #games yet -- can't fit a regression on zero rows, so this comes back empty.
-    #The preseason-prior blend below covers that gap.
-    current_ratings, current_home_field = _fit_team_ratings(completed)
-
-    #Last season's own final ratings, computed with this same method -- the
-    #other half of the preseason prior (see below).
+    #Last season's own final ratings -- the other half of the preseason prior.
     last_season_df = pd.DataFrame([g.to_dict() for g in last_season_games])
     if len(last_season_df) > 0:
         last_season_df = last_season_df[
@@ -304,7 +228,7 @@ def load_data():
         ]
         last_season_df = last_season_df.dropna(subset=["homePoints", "awayPoints"]).reset_index(drop=True)
         last_season_df["margin"] = last_season_df["homePoints"] - last_season_df["awayPoints"]
-    own_last_year_rating, own_last_year_home_field = _fit_team_ratings(last_season_df)
+    own_last_year_rating, _ = _fit_team_ratings(last_season_df)
 
     preseason_rating_sp = pd.Series(
         {t.team: t.rating for t in sp_plus if t.team in fbs_teams}
@@ -316,43 +240,34 @@ def load_data():
     sp_full = preseason_rating_sp.reindex(all_prior_teams).fillna(0.0)
     own_full = own_last_year_rating.reindex(all_prior_teams).fillna(0.0)
     preseason_rating = SP_PLUS_WEIGHT * sp_full + OWN_MODEL_WEIGHT * own_full
-    preseason_home_field = SP_PLUS_WEIGHT * 2.2 + OWN_MODEL_WEIGHT * own_last_year_home_field
-    #2.2 = SP+'s implied home-field share -- it doesn't publish a home-field
-    #number of its own, so this uses the average home_field coefficient observed
-    #across the 2022-2025 backtest seasons in its place.
 
     regular_completed_weeks = completed[completed["seasonType"] == "regular"]["week"].dropna()
     weeks_completed = int(regular_completed_weeks.max()) if len(regular_completed_weeks) > 0 else 0
 
-    prior_weight = PRIOR_DECAY_K / (PRIOR_DECAY_K + weeks_completed)
-
-    all_rated_teams = set(fbs_teams) | set(current_ratings.index) | set(preseason_rating.index)
-    current_full = current_ratings.reindex(all_rated_teams).fillna(0.0)
-    prior_full = preseason_rating.reindex(all_rated_teams).fillna(0.0)
-
-    ratings = prior_weight * prior_full + (1 - prior_weight) * current_full
-    home_field = prior_weight * preseason_home_field + (1 - prior_weight) * current_home_field
+    #Shrink toward the preseason prior in proportion to how much each team's own
+    #results actually argue for moving. Before any games are played this is
+    #exactly the prior.
+    ratings = _fit_ridge_to_prior(completed, preseason_rating)
+    home_field = HOME_FIELD_ADVANTAGE
 
     # Create FBS-only rankings
     FBS_rankings = pd.DataFrame({'team': ratings.index, 'rating': ratings.values})
     FBS_rankings = FBS_rankings[FBS_rankings['team'].isin(fbs_teams)]
     FBS_rankings = FBS_rankings.sort_values(by='rating', ascending=False).reset_index(drop=True)
 
-    prediction_model = train_prediction_model(completed, ratings, stats_clean, fbs_teams)
-
-    model_fully_trained = weeks_completed >= MODEL_FULLY_TRAINED_MIN_WEEKS and prediction_model is not None
+    #Gates whether betting edges are published (see MODEL_FULLY_TRAINED_MIN_WEEKS);
+    #predictions themselves are shown from week 1.
+    model_fully_trained = weeks_completed >= MODEL_FULLY_TRAINED_MIN_WEEKS
 
     return {
         "games": games,
         "venue_location": venue_location,
-        "stats_clean": stats_clean,
         "completed": completed,
         "upcoming": upcoming,
         "next_week": next_week,
         "ratings": ratings,
         "home_field": home_field,
         "FBS_rankings": FBS_rankings,
-        "prediction_model": prediction_model,
         "weeks_completed": weeks_completed,
         "model_fully_trained": model_fully_trained,
     }
@@ -383,57 +298,18 @@ refresh(force=True)
 
 #Prediciton function
 def predict_game(home, away, neutral_site=False):
-    rating_diff = ratings[home] - ratings[away]
-    #Whether or not home field advantage is applied
-    home_advantage = 0 if neutral_site else 1
+    """Predicted home margin and home win probability.
 
-    #Pull the home and away team stats and compare them, if we have them yet.
-    #Early in the season (or before it starts) CFBD's season-stats aggregate
-    #is empty -- fall back to a plain rating + home-field margin instead of
-    #crashing or refusing to predict the game at all.
-    h_stats_rows = stats_clean.loc[stats_clean["team"] == home]
-    a_stats_rows = stats_clean.loc[stats_clean["team"] == away]
-
-    if prediction_model is not None and len(h_stats_rows) > 0 and len(a_stats_rows) > 0:
-        h_stats = h_stats_rows.iloc[0]
-        a_stats = a_stats_rows.iloc[0]
-
-        # Compute stat differences between the two teams
-        ypp_diff = h_stats["yardsPerPlay_off"] - a_stats["yardsPerPlay_def"]
-        third_down_diff = h_stats["thirdDownPct"] - a_stats["thirdDownPct"]
-        turnover_diff = h_stats["turnoverMargin"] - a_stats["turnoverMargin"]
-
-        #Old arbitrary weighting system before ML model
-        #w_rating=0.7
-        #_ypp=0.1
-        #w_third=0.05
-        #w_turnover=0.15
-        #margin=(w_rating*rating_diff+(w_ypp*ypp_diff*10)+(w_third*third_down_diff*20)+(w_turnover*turnover_diff)+home_advantage)
-        # Built feature vector
-        features = np.array([[
-            rating_diff,
-            ypp_diff,
-            third_down_diff,
-            turnover_diff,
-            home_advantage,
-            ratings[home],
-            ratings[away],
-            h_stats['yardsPerPlay_off'],
-            a_stats['yardsPerPlay_off'],
-            h_stats['yardsPerPlay_def'],
-            a_stats['yardsPerPlay_def']
-        ]])
-        if not np.isnan(features).any():
-            # Predict margin using the trained model
-            margin = prediction_model.predict(features)[0]
-            #Calculate probabiliy based on the idea that a team favored by 7
-            #has a 75% chance to win
-            prob = 1 / (1 + np.exp(-margin / 7))  # rough logistic
-            return margin, prob
-
-    # No box-score stats for this matchup yet (or no trained model) -- predict
-    # off ratings (preseason-prior-blended early in the season) + home field alone.
-    margin = rating_diff + home_field * home_advantage
+    The margin is the rating difference plus home field. Team ratings already
+    carry everything the model knows -- an earlier version ran a second
+    regression on top of these ratings using box-score stats, but that layer
+    measured worse than the ratings alone in every window tested (2022-2025:
+    49.6% ATS against 51.7%, and 26 predictions on the wrong side of a
+    double-digit market favourite in weeks 1-4 against 1), so it was removed.
+    """
+    margin = (ratings[home] - ratings[away]) + (0 if neutral_site else home_field)
+    #Rough logistic: a team favoured by 7 wins about 75% of the time. This is a
+    #stated assumption, not a fitted calibration -- see the research directory.
     prob = 1 / (1 + np.exp(-margin / 7))
     return margin, prob
 
@@ -522,14 +398,10 @@ def get_upcoming_predictions(week=None,conference=None):
 
         is_neutral = game.get("neutralSite",False)
 
-        #skip games where data
-        #Helps avoid faulty data by skipping games missing a team rating.
-        #(Box-score stats aren't required -- predict_game falls back to
-        #ratings + home field when they're not published yet.)
-        #Also requires both teams to be FBS: a non-FBS opponent (FCS "buy
-        #games" etc.) still gets a coefficient out of the ratings regression
-        #since it played an FBS team, but that number means nothing -- it's
-        #fit on a handful of lopsided games and centered against FBS
+        #Skip games missing a team rating, and require both teams to be FBS: a
+        #non-FBS opponent (FCS "buy games" etc.) does get a rating out of the
+        #regression since it played an FBS team, but that number means nothing --
+        #it's fit on a handful of lopsided games and centred against FBS
         #competition, not against its own level. That's what produced spreads
         #20-35 points off Vegas for exactly these matchups.
         if home not in ratings.index or away not in ratings.index:
@@ -553,14 +425,12 @@ def get_upcoming_predictions(week=None,conference=None):
                 betting_margin = -betting_spread
                 spread_diff = round(margin - betting_margin, 1)
 
-            # While the model is still mostly running on the preseason prior
-            # (not enough of this season's own games yet -- see
-            # model_fully_trained above), don't let these picks count toward
-            # the tracked recommended record. tracking.py only counts a
-            # snapshotted pick as "recommended" when edge_class is set, so
-            # forcing it to None here is what keeps it out of that tally --
-            # the game still shows on the page with its edge highlighted,
-            # it just isn't graded.
+            # Before MODEL_FULLY_TRAINED_MIN_WEEKS, publish the prediction but
+            # not a betting edge: weeks 1-4 backtested at 47.4% against the
+            # spread versus 50.1% later, so early edges aren't worth acting on
+            # even though the winner picks are the most accurate of the season.
+            # tracking.py only counts a pick as "recommended" when edge_class is
+            # set, so clearing it here also keeps these out of the graded record.
             if not model_fully_trained:
                 edge_class = None
 

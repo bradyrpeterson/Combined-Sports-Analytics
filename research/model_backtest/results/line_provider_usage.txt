@@ -1,0 +1,4 @@
+2022: {'consensus': 1244, 'William Hill (New Jersey)': 185, 'Bovada': 21, 'Caesars Sportsbook (Colorado)': 9}
+2023: {'DraftKings': 754, 'ESPN Bet': 175, 'Bovada': 119, 'William Hill (New Jersey)': 314, 'Caesars Sportsbook (Colorado)': 51}
+2024: {'DraftKings': 811, 'ESPN Bet': 732, 'Bovada': 14}
+2025: {'DraftKings': 805, 'ESPN Bet': 656, 'Bovada': 129, 'Draft Kings': 7}

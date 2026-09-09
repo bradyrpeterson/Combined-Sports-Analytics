@@ -1,0 +1,6 @@
+model,MAE,straight_up_%,ats_n,ats_win_%,profit_$,roi_%
+residual_ridge,12.429,70.9,765,53.3,138.72,1.8
+residual_gbr,12.688,70.1,940,51.3,-198.62,-2.1
+massey_capped,12.818,70.9,916,51.2,-206.79,-2.3
+massey_uncapped,13.03,71.5,1009,50.7,-315.92,-3.1
+massey_huber,13.33,69.3,1088,49.4,-628.67,-5.8

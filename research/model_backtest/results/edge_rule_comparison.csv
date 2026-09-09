@@ -1,0 +1,7 @@
+model,rule,n_flagged,pct_of_eligible_games_flagged,straight_up_%,ats_n,ats_win_%,profit_$,roi_%,p_vs_breakeven
+current_baseline,"POINT (>=3pt, current site rule)",1435,60.8,70.0,1399,49.5,-760.63,-5.4,0.034
+current_baseline,"PERCENT (>=10%, |line|>=3)",1718,72.8,72.2,1681,49.6,-888.94,-5.3,0.023
+current_baseline,"EV (Normal-approx cover prob, EV>0)",2048,86.8,70.1,2004,49.8,-1007.27,-5.0,0.019
+massey_capped,"POINT (>=3pt, current site rule)",1333,56.5,69.5,1304,51.7,-173.34,-1.3,0.618
+massey_capped,"PERCENT (>=10%, |line|>=3)",1744,73.9,71.3,1706,51.1,-413.52,-2.4,0.297
+massey_capped,"EV (Normal-approx cover prob, EV>0)",2030,86.0,68.7,1991,50.7,-648.19,-3.3,0.133
