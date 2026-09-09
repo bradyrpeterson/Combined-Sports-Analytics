@@ -3,7 +3,7 @@ __pycache__/
 BradyPeterson_env/
 .vscode/
 firebase_credentials.json
-
+statalysts-venv/
 # Backtest CFBD response cache (~76MB) -- regenerate with fetch_data.py + fetch_early.py
 research/model_backtest/data/
 # Per-game backtest output; the summary CSVs alongside them are kept
