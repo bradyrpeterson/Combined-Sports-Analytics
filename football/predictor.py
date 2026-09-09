@@ -392,6 +392,14 @@ def get_upcoming_predictions(week=None,conference=None):
     else:
         betting_lines = get_betting_lines(week if week else next_week, season_type="regular")
 
+    #This season's win-loss record per team, shown alongside each matchup.
+    records = {}
+    for _, g in completed.iterrows():
+        home_won = g["homePoints"] > g["awayPoints"]
+        for team, won in ((g["homeTeam"], home_won), (g["awayTeam"], not home_won)):
+            wins, losses = records.get(team, (0, 0))
+            records[team] = (wins + 1, losses) if won else (wins, losses + 1)
+
     predictions = []
     for _, game in games_to_predict.iterrows():
         home, away = game["homeTeam"], game["awayTeam"]
@@ -448,6 +456,8 @@ def get_upcoming_predictions(week=None,conference=None):
             predictions.append({
                 "home": home,
                 "away": away,
+                "home_record": "%d-%d" % records.get(home, (0, 0)),
+                "away_record": "%d-%d" % records.get(away, (0, 0)),
                 "predicted_winner": winner,
                 "margin": round(abs(margin), 2),
                 "prob": round(prob * 100, 1) if margin > 0 else round((1 - prob) * 100, 1),

@@ -86,80 +86,114 @@
             <p class="empty-text">Check back later for upcoming predictions</p>
         </div>
         {% else %}
-        <table class="predictions-table">
-            <thead>
-                <tr>
-                    <th>Matchup</th>
-                    <th>Kickoff</th>
-                    <th>Model Spread</th>
-                    <th>Vegas Line</th>
-                    <th>Edge</th>
-                    <th>Confidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for pred in predictions %}
-                <tr class="{% if pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 3 %}edge-medium{% else %}edge-low{% endif %}"
-                    data-edge="{{ pred.spread_diff|abs if pred.spread_diff is not none else -1 }}"
-                    data-kickoff="{{ pred.kickoff_iso or '' }}">
-                    <td>
-                        <div class="matchup-cell">
-                            <div class="team-cell {% if pred.predicted_winner == pred.away %}team-predicted{% endif %}">
-                                {% if team_logos.get(pred.away) %}<img src="{{ team_logos[pred.away] }}" class="team-logo" alt="">{% endif %}
-                                {{ pred.away }}
-                            </div>
-                            <div class="vs-separator">@</div>
-                            <div class="team-cell {% if pred.predicted_winner == pred.home %}team-predicted{% endif %}">
-                                {% if team_logos.get(pred.home) %}<img src="{{ team_logos[pred.home] }}" class="team-logo" alt="">{% endif %}
-                                {{ pred.home }}
-                            </div>
-                            {% if pred.neutral_site %}
-                            <div class="neutral-indicator">(Neutral Site)</div>
-                            {% endif %}
+        <div class="pred-list" id="pred-list">
+            {% for pred in predictions %}
+            <details class="pred-card {% if pred.spread_diff and pred.spread_diff|abs >= 5 %}edge-high{% elif pred.spread_diff and pred.spread_diff|abs >= 3 %}edge-medium{% else %}edge-low{% endif %}"
+                data-edge="{{ pred.spread_diff|abs if pred.spread_diff is not none else -1 }}"
+                data-kickoff="{{ pred.kickoff_iso or '' }}"
+                data-day="{{ pred.game_date_display or 'Date TBD' }}">
+                <summary class="pred-summary">
+                    <div class="pred-teams">
+                        <div class="pred-team {% if pred.predicted_winner == pred.away %}team-predicted{% endif %}">
+                            {% if team_logos.get(pred.away) %}<img src="{{ team_logos[pred.away] }}" class="team-logo" alt="">{% endif %}
+                            <span class="pred-team-name">{{ pred.away }}</span>
+                            <span class="pred-team-record">{{ pred.away_record }}</span>
                         </div>
-                    </td>
-                    <td>
-                        <div class="kickoff-cell">
-                            <div class="kickoff-date">{{ pred.game_date_display or "TBD" }}</div>
-                            {% if pred.game_time_display %}<div class="kickoff-time">{{ pred.game_time_display }}</div>{% endif %}
-                            {% if pred.location %}<div class="kickoff-location">{{ pred.location }}</div>{% endif %}
+                        <div class="pred-team {% if pred.predicted_winner == pred.home %}team-predicted{% endif %}">
+                            {% if team_logos.get(pred.home) %}<img src="{{ team_logos[pred.home] }}" class="team-logo" alt="">{% endif %}
+                            <span class="pred-team-name">{{ pred.home }}</span>
+                            <span class="pred-team-record">{{ pred.home_record }}</span>
                         </div>
-                    </td>
-                    <td>
-                        <strong>{{ pred.predicted_winner }}</strong> -{{ pred.margin|round(1) }}
-                    </td>
-                    <td>
-                        {% if pred.betting_spread and pred.betting_spread|string != 'nan' %}
-                            {% if pred.betting_spread < 0 %}
-                            {{ pred.home }} {{ pred.betting_spread }}
-                            {% else %}
-                            {{ pred.away }} -{{ pred.betting_spread }}
-                            {% endif %}
-                        {% else %}
-                        <span class="no-data">N/A</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if pred.spread_diff and pred.spread_diff|string != 'nan' %}
-                        <span class="edge-value {% if pred.spread_diff|abs >= 5 %}high{% elif pred.spread_diff|abs >= 3 %}medium{% endif %}">
-                            +{{ pred.spread_diff|abs|round(1) }}
+                    </div>
+                    <div class="pred-meta">
+                        <div class="pred-kickoff">
+                            <span class="pred-kickoff-date">{{ pred.game_date_display or "TBD" }}</span>
+                            {% if pred.game_time_display %}<span class="pred-kickoff-time">{{ pred.game_time_display }}</span>{% endif %}
+                        </div>
+                        {% if pred.spread_diff and pred.spread_diff|string != 'nan' and pred.spread_diff|abs >= 3 %}
+                        <span class="pred-badge {% if pred.spread_diff|abs >= 5 %}high{% else %}medium{% endif %}">
+                            {% if pred.spread_diff|abs >= 5 %}Strong{% else %}Edge{% endif %} {{ pred.spread_diff|abs|round(1) }}
                         </span>
-                        {% else %}
-                        <span class="no-data">N/A</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        <div class="confidence-bar-cell">
-                            <div class="confidence-bar-small">
-                                <div class="confidence-fill-small" data-width="{{ pred.prob|round(1) }}"></div>
-                            </div>
-                            <span class="confidence-text-small">{{ pred.prob|round(1) }}%</span>
+                    </div>
+                    <span class="pred-chevron" aria-hidden="true"></span>
+                </summary>
+
+                <div class="pred-detail">
+                    <div class="pred-detail-grid">
+                        <div class="pred-stat">
+                            <div class="pred-stat-label">Our Line</div>
+                            <div class="pred-stat-value">{{ pred.predicted_winner }} -{{ pred.margin|round(1) }}</div>
                         </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <div class="pred-stat">
+                            <div class="pred-stat-label">Vegas Line</div>
+                            <div class="pred-stat-value">
+                                {% if pred.betting_spread and pred.betting_spread|string != 'nan' %}
+                                    {% if pred.betting_spread < 0 %}{{ pred.home }} {{ pred.betting_spread }}{% else %}{{ pred.away }} -{{ pred.betting_spread }}{% endif %}
+                                {% else %}
+                                <span class="no-data">Not posted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="pred-stat">
+                            <div class="pred-stat-label">Edge</div>
+                            <div class="pred-stat-value">
+                                {% if pred.spread_diff and pred.spread_diff|string != 'nan' %}
+                                <span class="edge-value {% if pred.spread_diff|abs >= 5 %}high{% elif pred.spread_diff|abs >= 3 %}medium{% endif %}">{{ pred.spread_diff|abs|round(1) }} pts</span>
+                                {% else %}
+                                <span class="no-data">N/A</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="pred-stat">
+                            <div class="pred-stat-label">Confidence</div>
+                            <div class="pred-stat-value">{{ pred.prob|round(1) }}% {{ pred.predicted_winner }}</div>
+                        </div>
+                    </div>
+
+                    {% set home_pct = pred.prob if pred.predicted_winner == pred.home else 100 - pred.prob %}
+                    {% set away_pct = 100 - home_pct %}
+                    {% set circ = 282.743 %}
+                    {% set away_len = circ * away_pct / 100 %}
+                    <div class="pred-confidence">
+                        <div class="pred-conf-team">
+                            {% if team_logos.get(pred.away) %}<img src="{{ team_logos[pred.away] }}" class="pred-conf-logo" alt="">{% endif %}
+                            <span class="pred-conf-pct">{{ away_pct|round(1) }}%</span>
+                            <span class="pred-conf-name">{{ pred.away }}</span>
+                        </div>
+
+                        <svg class="pred-donut" viewBox="0 0 120 120" role="img"
+                             aria-label="{{ pred.away }} {{ away_pct|round(1) }} percent, {{ pred.home }} {{ home_pct|round(1) }} percent">
+                            <circle cx="60" cy="60" r="45" fill="none" stroke="var(--bg-tertiary)" stroke-width="20"></circle>
+                            <circle cx="60" cy="60" r="45" fill="none" stroke-width="20"
+                                    stroke="{{ team_colors.get(pred.away, '#5a6270') }}"
+                                    stroke-dasharray="{{ away_len|round(2) }} {{ (circ - away_len)|round(2) }}"
+                                    transform="rotate(-90 60 60)"></circle>
+                            <circle cx="60" cy="60" r="45" fill="none" stroke-width="20"
+                                    stroke="{{ team_colors.get(pred.home, '#a8b2c8') }}"
+                                    stroke-dasharray="{{ (circ - away_len)|round(2) }} {{ away_len|round(2) }}"
+                                    stroke-dashoffset="{{ (-away_len)|round(2) }}"
+                                    transform="rotate(-90 60 60)"></circle>
+                            <text x="60" y="54" class="pred-donut-cap">WIN</text>
+                            <text x="60" y="70" class="pred-donut-cap">PROB</text>
+                        </svg>
+
+                        <div class="pred-conf-team">
+                            {% if team_logos.get(pred.home) %}<img src="{{ team_logos[pred.home] }}" class="pred-conf-logo" alt="">{% endif %}
+                            <span class="pred-conf-pct">{{ home_pct|round(1) }}%</span>
+                            <span class="pred-conf-name">{{ pred.home }}</span>
+                        </div>
+                    </div>
+
+                    {% if pred.location %}
+                    <p class="pred-venue">{{ pred.location }}{% if pred.neutral_site %} &middot; Neutral Site{% endif %}</p>
+                    {% elif pred.neutral_site %}
+                    <p class="pred-venue">Neutral Site</p>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
 
         <div class="predictions-legend">
             <h4>Edge Legend</h4>
@@ -232,11 +266,11 @@
         }
 
         function sortPredictions(mode) {
-            const tbody = document.querySelector('.predictions-table tbody');
-            if (!tbody) return;
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const list = document.getElementById('pred-list');
+            if (!list) return;
+            const cards = Array.from(list.querySelectorAll('.pred-card'));
 
-            rows.sort(function(a, b) {
+            cards.sort(function(a, b) {
                 if (mode === 'time') {
                     const ta = a.dataset.kickoff ? new Date(a.dataset.kickoff).getTime() : Infinity;
                     const tb = b.dataset.kickoff ? new Date(b.dataset.kickoff).getTime() : Infinity;
@@ -248,7 +282,23 @@
                 return eb - ea;
             });
 
-            rows.forEach(function(row) { tbody.appendChild(row); });
+            // Day separators only make sense in chronological order
+            list.querySelectorAll('.pred-day-header').forEach(function(h) { h.remove(); });
+
+            let lastDay = null;
+            cards.forEach(function(card) {
+                if (mode === 'time') {
+                    const day = card.dataset.day;
+                    if (day && day !== lastDay) {
+                        const header = document.createElement('div');
+                        header.className = 'pred-day-header';
+                        header.textContent = day;
+                        list.appendChild(header);
+                        lastDay = day;
+                    }
+                }
+                list.appendChild(card);
+            });
         }
 
         function setSortMode(mode) {

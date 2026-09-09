@@ -343,6 +343,7 @@ def football():
                              conferences=conferences,
                              selected_conference=conference,
                              team_logos=football_logos,
+                             team_colors=football_colors,
                              model_fully_trained=football_predictor.model_fully_trained,
                              weeks_completed=football_predictor.weeks_completed)
     except Exception as e:
@@ -355,6 +356,7 @@ def football():
                              selected_week=str(football_predictor.next_week) if FOOTBALL_AVAILABLE else "1",
                              selected_conference="All",
                              team_logos=football_logos,
+                             team_colors=football_colors,
                              model_fully_trained=getattr(football_predictor, 'model_fully_trained', True) if FOOTBALL_AVAILABLE else True,
                              weeks_completed=getattr(football_predictor, 'weeks_completed', 0) if FOOTBALL_AVAILABLE else 0)
 

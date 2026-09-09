@@ -3004,3 +3004,237 @@ a {
         }
     }
 }
+/* ============================================================
+   Football predictions: expandable game cards
+   Replaces the old .predictions-table layout on /football.
+   Uses the existing token set -- no new colors introduced.
+   ============================================================ */
+
+.pred-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.pred-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid transparent;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.pred-card:hover { border-color: var(--border-hover); }
+.pred-card.edge-high { border-left-color: var(--accent-green); }
+.pred-card.edge-medium { border-left-color: var(--accent-yellow); }
+.pred-card.edge-high:hover { border-left-color: var(--accent-green); }
+.pred-card.edge-medium:hover { border-left-color: var(--accent-yellow); }
+
+/* --- collapsed row --- */
+.pred-summary {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    list-style: none;
+}
+.pred-summary::-webkit-details-marker { display: none; }
+.pred-summary:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: -2px;
+}
+
+.pred-teams {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pred-team {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    color: var(--text-secondary);
+}
+
+.pred-team .team-logo { width: 28px; height: 28px; }
+
+.pred-team-name {
+    font-weight: 600;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The predicted winner is simply the brighter of the two rows */
+.pred-team.team-predicted { color: var(--text-primary); }
+.pred-team.team-predicted .pred-team-name { font-weight: 700; }
+
+.pred-team-record {
+    flex: none;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.pred-meta {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    text-align: right;
+}
+
+.pred-kickoff { display: flex; flex-direction: column; gap: 0.1rem; }
+
+.pred-kickoff-date {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.pred-kickoff-time {
+    font-size: 0.825rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.pred-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.pred-badge.high { background: rgba(81, 207, 102, 0.14); color: var(--accent-green); }
+.pred-badge.medium { background: rgba(255, 212, 59, 0.13); color: var(--accent-yellow); }
+
+.pred-chevron {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--text-tertiary);
+    border-bottom: 2px solid var(--text-tertiary);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.2s;
+}
+.pred-card[open] .pred-chevron { transform: rotate(-135deg) translate(-2px, -2px); }
+
+/* --- expanded detail --- */
+.pred-detail {
+    padding: 0 1.25rem 1.25rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.pred-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0 0.875rem;
+}
+
+.pred-stat-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 0.25rem;
+}
+
+.pred-stat-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Win-probability donut: one arc per team, in that team's own color */
+.pred-confidence {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.75rem;
+    padding: 0.5rem 0 0.25rem;
+}
+
+.pred-donut {
+    width: 118px;
+    height: 118px;
+    flex: none;
+}
+
+.pred-donut circle { stroke-linecap: butt; }
+
+.pred-donut-cap {
+    fill: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-anchor: middle;
+}
+
+.pred-conf-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    min-width: 0;
+    flex: 1;
+    max-width: 150px;
+}
+
+.pred-conf-logo { width: 40px; height: 40px; object-fit: contain; }
+
+.pred-conf-pct {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.pred-conf-name {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+/* Day separators, inserted by JS when sorting chronologically */
+.pred-day-header {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 0.5rem 0 0.5rem;
+    margin-top: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.pred-day-header:first-child { margin-top: 0; }
+
+.pred-venue {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    margin: 0.875rem 0 0;
+}
+
+@media (max-width: 640px) {
+    .pred-summary { gap: 0.75rem; padding: 0.75rem 0.875rem; }
+    .pred-team-name { font-size: 0.88rem; }
+    .pred-kickoff-date, .pred-kickoff-time { font-size: 0.72rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pred-chevron, .pred-card { transition: none; }
+}
