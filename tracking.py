@@ -51,23 +51,28 @@ def _basketball_season_for_date(date_str):
     return year + 1 if month >= 8 else year  # season is labeled by its ending year
 
 
-def _get_football_final(headers, date_str, home, away):
-    season = _football_season_for_date(date_str)
-    url = f"https://api.collegefootballdata.com/games?year={season}&team={home}"
-    resp = requests.get(url, headers=headers, timeout=15)
+def _football_finals_for_season(headers, season):
+    """Every finished game in a season, as {(date, home, away): (home_pts, away_pts)}.
+
+    One request covers the whole season. The previous version fetched per pick,
+    which meant one HTTP call for every pending game and reliably tripped CFBD's
+    rate limit once the backlog grew.
+    """
+    url = f"https://api.collegefootballdata.com/games?year={season}"
+    resp = requests.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
+    finals = {}
     for game in resp.json():
-        if game.get("homeTeam") != home or game.get("awayTeam") != away:
-            continue
-        if (game.get("startDate") or "")[:10] != date_str:
-            continue
         home_points, away_points = game.get("homePoints"), game.get("awayPoints")
-        if home_points is not None and away_points is not None:
-            return home_points, away_points
-    return None
+        if home_points is None or away_points is None:
+            continue  # not played yet
+        date_str = (game.get("startDate") or "")[:10]
+        finals[(date_str, game.get("homeTeam"), game.get("awayTeam"))] = (home_points, away_points)
+    return finals
 
 
-def _get_basketball_final(headers, date_str, home, away):
+def _basketball_finals_for_date(headers, date_str):
+    """Every final from one slate, as {(home, away): (home_pts, away_pts)}."""
     season = _basketball_season_for_date(date_str)
     est = pytz.timezone("America/New_York")
     day = est.localize(datetime.strptime(date_str, "%Y-%m-%d"))
@@ -79,12 +84,15 @@ def _get_basketball_final(headers, date_str, home, away):
         "https://api.collegebasketballdata.com/games"
         f"?season={season}&startDateRange={start_str}&endDateRange={end_str}"
     )
-    resp = requests.get(url, headers=headers, timeout=15)
+    resp = requests.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
+    finals = {}
     for game in resp.json():
-        if game.get("homeTeam") == home and game.get("awayTeam") == away and game.get("status") == "final":
-            return game.get("homePoints"), game.get("awayPoints")
-    return None
+        if game.get("status") == "final":
+            finals[(game.get("homeTeam"), game.get("awayTeam"))] = (
+                game.get("homePoints"), game.get("awayPoints")
+            )
+    return finals
 
 
 def snapshot_todays_picks(db, football_predictor=None, basketball_predictor=None):
@@ -149,22 +157,45 @@ def settle_pending_picks(db, football_predictor=None, basketball_predictor=None)
         "basketball": getattr(basketball_predictor, "headers", None),
     }
     settled = 0
-    pending_docs = db.collection("tracked_picks").where(filter=FieldFilter("status", "==", "pending")).stream()
+    pending_docs = list(db.collection("tracked_picks").where(filter=FieldFilter("status", "==", "pending")).stream())
 
+    #Only games whose date has arrived can have a final score. Snapshotting runs a
+    #week or more ahead, so most pending picks are for games that haven't kicked off
+    #-- asking the API for their score is guaranteed to return nothing, and doing it
+    #once per pick every run is what exhausted the rate limit.
+    today = datetime.now(pytz.timezone("America/New_York")).date().isoformat()
+    due = []
     for doc in pending_docs:
         data = doc.to_dict()
-        sport = data["sport"]
-        if headers.get(sport) is None:
+        if headers.get(data.get("sport")) is None:
             continue
+        if (data.get("date") or "") <= today:
+            due.append((doc, data))
 
-        try:
-            if sport == "football":
-                result = _get_football_final(headers["football"], data["date"], data["home"], data["away"])
-            else:
-                result = _get_basketball_final(headers["basketball"], data["date"], data["home"], data["away"])
-        except Exception as e:
-            print(f"[tracking] Error fetching final score for {data['home']} vs {data['away']}: {e}")
-            continue
+    skipped = len(pending_docs) - len(due)
+    if skipped:
+        print(f"[tracking] {skipped} pending pick(s) are for games that haven't been played yet -- skipping")
+    if not due:
+        return 0
+
+    #Fetch results in bulk: one request per football season, one per basketball
+    #slate, rather than one per pick.
+    football_finals = {}
+    basketball_finals = {}
+    try:
+        for season in {_football_season_for_date(d["date"]) for _, d in due if d["sport"] == "football"}:
+            football_finals.update(_football_finals_for_season(headers["football"], season))
+        for date_str in {d["date"] for _, d in due if d["sport"] == "basketball"}:
+            basketball_finals[date_str] = _basketball_finals_for_date(headers["basketball"], date_str)
+    except Exception as e:
+        print(f"[tracking] Error fetching final scores: {e}")
+        return 0
+
+    for doc, data in due:
+        if data["sport"] == "football":
+            result = football_finals.get((data["date"], data["home"], data["away"]))
+        else:
+            result = basketball_finals.get(data["date"], {}).get((data["home"], data["away"]))
 
         if result is None:
             continue  # game hasn't finished yet, try again next run

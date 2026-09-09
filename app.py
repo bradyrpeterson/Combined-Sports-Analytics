@@ -75,6 +75,22 @@ def login_required(f):
     return decorated_function
 
 
+@app.route("/robots.txt")
+def robots():
+    """Crawlers request this on every visit; without it they generate 404 noise.
+    Keeps bots off the authenticated and admin paths, which have nothing to index."""
+    body = "\n".join([
+        "User-agent: *",
+        "Disallow: /admin/",
+        "Disallow: /manage-subscription",
+        "Disallow: /auth-callback",
+        "Disallow: /webhook/",
+        "Allow: /",
+        "",
+    ])
+    return app.response_class(body, mimetype="text/plain")
+
+
 @app.route("/login")
 def login():
     """Login page"""
@@ -628,15 +644,37 @@ def run_daily_tracking_job():
         import traceback
         traceback.print_exc()
 
+def _claim_scheduler_slot():
+    """Return a held lock file if this process should own the scheduler, else None.
+
+    Gunicorn runs more than one worker, and each imports this module, so without a
+    guard every worker would schedule its own copy of the tracking job. An flock is
+    exclusive across processes on the instance and is released automatically if the
+    holder dies, so a recycled worker can pick the job back up.
+    """
+    import fcntl
+
+    lock_file = open("/tmp/statalysts-scheduler.lock", "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        lock_file.close()
+        return None
+    return lock_file
+
+
 if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
     # Guard avoids double-scheduling under Flask's debug-mode reloader (which forks a child
     # process with WERKZEUG_RUN_MAIN=true); gunicorn in production never sets this var, so the
-    # scheduler still starts there. Single gunicorn worker (see Procfile) keeps this to one job.
-    from apscheduler.schedulers.background import BackgroundScheduler
+    # scheduler still starts there.
+    # Module-level reference keeps the lock's file descriptor open for the process lifetime.
+    _scheduler_lock = _claim_scheduler_slot()
+    if _scheduler_lock is not None:
+        from apscheduler.schedulers.background import BackgroundScheduler
 
-    scheduler = BackgroundScheduler(timezone="America/New_York")
-    scheduler.add_job(run_daily_tracking_job, "cron", hour=6, minute=0)
-    scheduler.start()
+        scheduler = BackgroundScheduler(timezone="America/New_York")
+        scheduler.add_job(run_daily_tracking_job, "cron", hour=6, minute=0)
+        scheduler.start()
 
 @app.route("/admin/settle-picks", methods=["POST"])
 def admin_settle_picks():
