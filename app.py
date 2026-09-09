@@ -10,6 +10,7 @@ import numpy as np
 from functools import wraps
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
+from google.cloud.firestore_v1.base_query import FieldFilter
 from datetime import datetime
 
 # Add both sport folders to Python path
@@ -247,11 +248,19 @@ def index():
         except Exception as e:
             print(f"Error loading track record: {e}")
             overall_record = {"total_picks": 0, "straight_up_win_pct": None, "recommended_count": 0,
-                               "ats_win_pct": None, "profit_series": [], "total_profit": 0}
+                               "ats_win_pct": None, "profit_series": [], "total_profit": 0, "roi_pct": None}
             football_record = dict(overall_record)
             basketball_record = dict(overall_record)
 
+        try:
+            recent_results = tracking.get_recent_results(db, sport="football", limit=12)
+        except Exception as e:
+            print(f"Error loading recent results: {e}")
+            recent_results = []
+
         return render_template('index.html',
+                             recent_results=recent_results,
+                             team_logos=football_logos,
                              featured_pick=featured_pick,
                              football_top5=football_top5,
                              basketball_top5=basketball_top5,
@@ -268,8 +277,10 @@ def index():
         import traceback
         traceback.print_exc()
         empty_record = {"total_picks": 0, "straight_up_win_pct": None, "recommended_count": 0,
-                         "ats_win_pct": None, "profit_series": [], "total_profit": 0}
+                         "ats_win_pct": None, "profit_series": [], "total_profit": 0, "roi_pct": None}
         return render_template('index.html',
+                             recent_results=[],
+                             team_logos={},
                              featured_pick=None,
                              football_top5=[],
                              basketball_top5=[],
@@ -753,7 +764,7 @@ def stripe_webhook():
         customer_email = invoice["customer_email"]
 
         if customer_email:
-            users = db.collection("users").where("email", "==", customer_email).get()
+            users = db.collection("users").where(filter=FieldFilter("email", "==", customer_email)).get()
             for user_doc in users:
                 user_doc.reference.update({
                     "status": "active",
@@ -765,7 +776,7 @@ def stripe_webhook():
         subscription = event["data"]["object"]
         sub_id = subscription["id"]
 
-        users = db.collection("users").where("subscription_id", "==", sub_id).get()
+        users = db.collection("users").where(filter=FieldFilter("subscription_id", "==", sub_id)).get()
         for user_doc in users:
             user_doc.reference.update({"status": "expired"})
             print(f"Cancelled subscription: {sub_id}")
@@ -813,7 +824,7 @@ def admin_grant_access():
         return jsonify({"error": "Email required"}), 400
 
     # Find user by email
-    users = db.collection("users").where("email", "==", email).get()
+    users = db.collection("users").where(filter=FieldFilter("email", "==", email)).get()
 
     if not users:
         return jsonify({"error": f"No user found with email {email}"}), 404

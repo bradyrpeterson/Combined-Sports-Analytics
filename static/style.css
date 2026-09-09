@@ -3238,3 +3238,204 @@ a {
 @media (prefers-reduced-motion: reduce) {
     .pred-chevron, .pred-card { transition: none; }
 }
+
+/* ============================================================
+   Landing page: latest graded results
+   Square-ish cards in a grid; each expands for the full breakdown.
+   ============================================================ */
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap: 0.875rem;
+    margin-top: 1rem;
+    align-items: start;
+}
+
+.result-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.result-card:hover { border-color: var(--border-hover); }
+
+.result-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.125rem;
+    cursor: pointer;
+    list-style: none;
+}
+.result-summary::-webkit-details-marker { display: none; }
+.result-summary:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: -2px;
+}
+
+.result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.result-date {
+    font-size: 0.72rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Edge tier: green >=5pt (counts toward the record), yellow 3-5pt (shown only) */
+.result-tier {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.result-tier.high { background: rgba(81, 207, 102, 0.14); color: var(--accent-green); }
+.result-tier.medium { background: rgba(255, 212, 59, 0.13); color: var(--accent-yellow); }
+
+/* Moneyline / spread outcome chips */
+.result-outcomes {
+    display: flex;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.result-chip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 0.22rem 0.5rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    text-transform: capitalize;
+}
+.result-chip.win { background: rgba(81, 207, 102, 0.14); color: var(--accent-green); }
+/* Losses read muted rather than alarming, matching .chart-card-net.negative */
+.result-chip.loss { background: rgba(168, 178, 200, 0.1); color: var(--text-secondary); }
+.result-chip.push { background: rgba(255, 212, 59, 0.13); color: var(--accent-yellow); }
+.result-chip.none { background: rgba(255, 255, 255, 0.06); color: var(--text-tertiary); }
+
+.result-teams {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.result-team {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--text-tertiary);
+    min-width: 0;
+}
+
+/* The team that actually won reads at full strength */
+.result-team.won { color: var(--text-primary); }
+
+.result-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.result-team-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-score {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    flex: none;
+}
+
+.result-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.result-foot-pick {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-chevron {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--text-tertiary);
+    border-bottom: 2px solid var(--text-tertiary);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.2s;
+}
+.result-card[open] .result-chevron { transform: rotate(-135deg) translate(-2px, -2px); }
+
+/* --- expanded breakdown --- */
+.result-detail {
+    padding: 0.875rem 1.125rem 1.125rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.result-line {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.result-line-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+}
+
+.result-line-value {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.result-note {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .result-chevron, .result-card { transition: none; }
+}

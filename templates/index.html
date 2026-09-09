@@ -55,7 +55,7 @@
                     <span class="hero-label">Machine Learning Analytics</span>
                     <h1>Sports Predictions Built on <span class="text-gradient">Advanced Machine Learning</span></h1>
                     <p class="hero-description">
-                        The model creates rankings and predictions based on a two-stage linear regression of advanced stats combined with a power rating system.
+                        Every team carries a power rating fit on point margins across the season, anchored to a preseason projection and pulled toward its own results as the evidence accumulates.
                     </p>
                 </div>
             </div>
@@ -89,89 +89,77 @@
             </div>
             {% endif %}
 
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <div class="stat-tile-icon">{{ icon_chart(20) }}</div>
-                    <div class="hero-stat-value">{{ overall_record.total_picks }}</div>
-                    <div class="hero-stat-label">Games Graded</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="stat-tile-icon">{{ icon_bolt(20) }}</div>
-                    <div class="hero-stat-value">{{ overall_record.straight_up_win_pct if overall_record.straight_up_win_pct is not none else '--' }}{% if overall_record.straight_up_win_pct is not none %}%{% endif %}</div>
-                    <div class="hero-stat-label">Straight-Up Accuracy</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="stat-tile-icon">{{ icon_trending_up(20) }}</div>
-                    <div class="hero-stat-value">{{ overall_record.ats_win_pct if overall_record.ats_win_pct is not none else '--' }}{% if overall_record.ats_win_pct is not none %}%{% endif %}</div>
-                    <div class="hero-stat-label">Recommended-Bet Win Rate ({{ overall_record.recommended_count }} bets)</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="stat-tile-icon">{{ icon_dollar(20) }}</div>
-                    <div class="hero-stat-value">{{ '+' if overall_record.total_profit >= 0 else '' }}${{ overall_record.total_profit }}</div>
-                    <div class="hero-stat-label">Profit on $10 Flat Bets</div>
-                </div>
-            </div>
+            {% if recent_results %}
+            <h2 class="section-title">How Last Week's Recommended Games Finished</h2>
+            <div class="results-grid">
+                {% for r in recent_results %}
+                <details class="result-card">
+                    <summary class="result-summary">
+                        <div class="result-head">
+                            <span class="result-date">{{ r.date }}</span>
+                            <span class="result-tier {{ r.tier }}">{{ r.edge|round(1) }} pt edge</span>
+                        </div>
+                        <div class="result-teams">
+                            <div class="result-team {% if r.actual_winner == r.away %}won{% endif %}">
+                                {% if team_logos.get(r.away) %}<img src="{{ team_logos[r.away] }}" class="result-logo" alt="">{% endif %}
+                                <span class="result-team-name">{{ r.away }}</span>
+                                <span class="result-score">{{ r.away_score }}</span>
+                            </div>
+                            <div class="result-team {% if r.actual_winner == r.home %}won{% endif %}">
+                                {% if team_logos.get(r.home) %}<img src="{{ team_logos[r.home] }}" class="result-logo" alt="">{% endif %}
+                                <span class="result-team-name">{{ r.home }}</span>
+                                <span class="result-score">{{ r.home_score }}</span>
+                            </div>
+                        </div>
+                        <div class="result-foot">
+                            <div class="result-outcomes">
+                                <span class="result-chip {{ 'win' if r.ml_correct else 'loss' }}">
+                                    ML {{ '&check;'|safe if r.ml_correct else '&times;'|safe }}
+                                </span>
+                                <span class="result-chip {{ r.ats_result or 'none' }}">
+                                    Spread {% if r.ats_result == 'win' %}&check;{% elif r.ats_result == 'loss' %}&times;{% elif r.ats_result == 'push' %}&ndash;{% else %}&ndash;{% endif %}
+                                </span>
+                            </div>
+                            <span class="result-chevron" aria-hidden="true"></span>
+                        </div>
+                    </summary>
 
-            <h2 class="section-title">Track Record</h2>
-            <div class="rankings-section chart-card">
-                <div class="rankings-header chart-card-header">
-                    <h2 class="rankings-title">Cumulative Profit &mdash; $10 on Every Recommended Bet</h2>
-                    {% if overall_record.profit_series %}
-                    <span class="chart-card-net {{ 'positive' if overall_record.total_profit >= 0 else 'negative' }}">
-                        {{ icon_trending_up(16) }}
-                        {{ '+' if overall_record.total_profit >= 0 else '' }}${{ overall_record.total_profit }} net
-                    </span>
-                    {% endif %}
-                </div>
-                <div class="chart-container">
-                    <canvas id="profitChart"></canvas>
-                </div>
-                {% if not overall_record.profit_series %}
-                <p class="section-subtitle chart-empty-note">No recommended bets have been settled yet &mdash; this fills in automatically as games are played and graded.</p>
-                {% endif %}
+                    <div class="result-detail">
+                        <div class="result-line">
+                            <span class="result-line-label">We projected</span>
+                            <span class="result-line-value">{{ r.predicted_winner }} by {{ r.model_margin|abs|round(1) }}{% if r.win_prob %} &middot; {{ r.win_prob|round(0)|int }}%{% endif %}</span>
+                        </div>
+                        <div class="result-line">
+                            <span class="result-line-label">Final</span>
+                            <span class="result-line-value">{{ r.actual_winner }} by {{ r.actual_margin }}</span>
+                        </div>
+                        {% if r.betting_spread is not none %}
+                        <div class="result-line">
+                            <span class="result-line-label">Vegas line</span>
+                            <span class="result-line-value">{% if r.betting_spread < 0 %}{{ r.home }} {{ r.betting_spread }}{% else %}{{ r.away }} -{{ r.betting_spread }}{% endif %}</span>
+                        </div>
+                        {% endif %}
+                        {% if r.recommended_team %}
+                        <div class="result-line">
+                            <span class="result-line-label">We recommended</span>
+                            <span class="result-line-value">
+                                {{ r.recommended_team }}
+                                <span class="result-tier {{ r.tier }}">{{ 'Green' if r.tier == 'high' else 'Yellow' }}</span>
+                            </span>
+                        </div>
+                        {% endif %}
+                        <div class="result-line">
+                            <span class="result-line-label">How it finished</span>
+                            <span class="result-line-value">
+                                <span class="result-chip {{ 'win' if r.ml_correct else 'loss' }}">Moneyline {{ 'won' if r.ml_correct else 'lost' }}</span>
+                                <span class="result-chip {{ r.ats_result or 'none' }}">Spread {{ r.ats_result if r.ats_result else 'n/a' }}</span>
+                            </span>
+                        </div>
+                    </div>
+                </details>
+                {% endfor %}
             </div>
-
-            <div class="rankings-container">
-                <div class="rankings-section">
-                    <div class="rankings-header">
-                        <h2 class="rankings-title">Football</h2>
-                    </div>
-                    <div class="game-stats padded">
-                        <div class="stat">
-                            <div class="stat-label">Graded Games</div>
-                            <div class="stat-value">{{ football_record.total_picks }}</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Straight-Up</div>
-                            <div class="stat-value">{{ football_record.straight_up_win_pct if football_record.straight_up_win_pct is not none else '--' }}{% if football_record.straight_up_win_pct is not none %}%{% endif %}</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">ATS on Recommended Bets</div>
-                            <div class="stat-value">{{ football_record.ats_win_pct if football_record.ats_win_pct is not none else '--' }}{% if football_record.ats_win_pct is not none %}%{% endif %}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="rankings-section">
-                    <div class="rankings-header">
-                        <h2 class="rankings-title">Basketball</h2>
-                    </div>
-                    <div class="game-stats padded">
-                        <div class="stat">
-                            <div class="stat-label">Graded Games</div>
-                            <div class="stat-value">{{ basketball_record.total_picks }}</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Straight-Up</div>
-                            <div class="stat-value">{{ basketball_record.straight_up_win_pct if basketball_record.straight_up_win_pct is not none else '--' }}{% if basketball_record.straight_up_win_pct is not none %}%{% endif %}</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">ATS on Recommended Bets</div>
-                            <div class="stat-value">{{ basketball_record.ats_win_pct if basketball_record.ats_win_pct is not none else '--' }}{% if basketball_record.ats_win_pct is not none %}%{% endif %}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {% endif %}
         </div>
     </section>
 
@@ -570,97 +558,7 @@
     });
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script>
-    const profitSeries = {{ overall_record.profit_series | tojson }};
-    const profitCtx = document.getElementById('profitChart');
-    if (profitCtx && profitSeries.length > 0) {
-        const ctx2d = profitCtx.getContext('2d');
-        const fillGradient = ctx2d.createLinearGradient(0, 0, 0, 340);
-        fillGradient.addColorStop(0, 'rgba(77, 171, 247, 0.28)');
-        fillGradient.addColorStop(1, 'rgba(77, 171, 247, 0)');
-
-        const lastIndex = profitSeries.length - 1;
-
-        new Chart(profitCtx, {
-            type: 'line',
-            data: {
-                labels: profitSeries.map(p => p.date),
-                datasets: [
-                    {
-                        label: 'Zero',
-                        data: profitSeries.map(() => 0),
-                        borderColor: 'rgba(255, 255, 255, 0.12)',
-                        borderWidth: 1,
-                        borderDash: [4, 4],
-                        pointRadius: 0,
-                        pointHoverRadius: 0,
-                        fill: false,
-                        order: 2
-                    },
-                    {
-                        label: 'Cumulative profit ($)',
-                        data: profitSeries.map(p => p.profit),
-                        borderColor: '#4dabf7',
-                        backgroundColor: fillGradient,
-                        borderWidth: 2.5,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: profitSeries.map((_, i) => i === lastIndex ? 4 : 0),
-                        pointHoverRadius: 5,
-                        pointBackgroundColor: '#4dabf7',
-                        pointBorderColor: '#0f1419',
-                        pointBorderWidth: 2,
-                        order: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        filter: (item) => item.datasetIndex === 1,
-                        backgroundColor: '#1a1f2e',
-                        titleColor: '#a8b2c8',
-                        bodyColor: '#e8eaf0',
-                        borderColor: '#2a2f3e',
-                        borderWidth: 1,
-                        padding: 10,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        titleFont: { family: 'Inter', size: 12, weight: '500' },
-                        bodyFont: { family: 'Inter', size: 13, weight: '700' },
-                        callbacks: {
-                            label: (item) => {
-                                const v = item.parsed.y;
-                                return (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2);
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#5a6270', maxTicksLimit: 8, font: { family: 'Inter', size: 11 } },
-                        grid: { display: false },
-                        border: { color: '#1a1f2e' }
-                    },
-                    y: {
-                        ticks: {
-                            color: '#5a6270',
-                            font: { family: 'Inter', size: 11 },
-                            callback: (v) => (v >= 0 ? '+$' : '-$') + Math.abs(v)
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                        border: { display: false }
-                    }
-                }
-            }
-        });
-    }
     </script>
 </body>
 </html>

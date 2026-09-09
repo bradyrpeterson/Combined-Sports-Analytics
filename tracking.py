@@ -8,10 +8,24 @@ import os
 from datetime import datetime, timezone
 
 import requests
+from google.cloud.firestore_v1.base_query import FieldFilter
 import pytz
 
 BET_STAKE = 10
 BET_TO_WIN = 9.09  # standard -110 odds on a flat $10 bet
+
+#Only games where our number differs from the market by at least this much count
+#toward the public record. Picks are still snapshotted and graded at the 3-point
+#threshold the site highlights -- this filter is applied when reading, so the
+#stored history keeps its full detail and the cut can be revisited.
+#Backtesting 2022-2025 found the >=5 tier was the only one that graded at or
+#above break-even; the 3-5 tier lost money in every model tested.
+RECOMMENDED_MIN_EDGE = 5
+
+#The lower threshold the site flags at. Games between the two thresholds are graded
+#into their own bucket by get_track_record (the "yellow_*" keys) so the two tiers can
+#be compared later without mixing the weaker one into the headline record.
+FLAGGED_MIN_EDGE = 3
 
 
 def _slug(name):
@@ -135,7 +149,7 @@ def settle_pending_picks(db, football_predictor=None, basketball_predictor=None)
         "basketball": getattr(basketball_predictor, "headers", None),
     }
     settled = 0
-    pending_docs = db.collection("tracked_picks").where("status", "==", "pending").stream()
+    pending_docs = db.collection("tracked_picks").where(filter=FieldFilter("status", "==", "pending")).stream()
 
     for doc in pending_docs:
         data = doc.to_dict()
@@ -183,6 +197,57 @@ def settle_pending_picks(db, football_predictor=None, basketball_predictor=None)
     return settled
 
 
+def get_recent_results(db, sport=None, limit=10, min_edge=FLAGGED_MIN_EDGE):
+    """Most recently settled *recommended* picks, newest first -- both the yellow
+    (3-5 pt) and green (>=5 pt) tiers -- with how each one finished on the
+    moneyline and against the spread. Powers the results panel on the landing page."""
+    query = db.collection("tracked_picks").where(filter=FieldFilter("status", "==", "final"))
+    if sport:
+        query = query.where(filter=FieldFilter("sport", "==", sport))
+
+    picks = [d.to_dict() for d in query.stream()]
+    picks = [
+        p for p in picks
+        if p.get("actual_home_score") is not None
+        and p.get("recommended")
+        and (p.get("edge") or 0) >= min_edge
+    ]
+    picks.sort(key=lambda p: p.get("date", ""), reverse=True)
+
+    results = []
+    for p in picks[:limit]:
+        home_score, away_score = p["actual_home_score"], p["actual_away_score"]
+        winner = p["home"] if home_score > away_score else p["away"]
+        results.append({
+            "sport": p.get("sport"),
+            "date": p.get("date"),
+            "home": p["home"],
+            "away": p["away"],
+            "home_score": home_score,
+            "away_score": away_score,
+            "actual_winner": winner,
+            "actual_margin": abs(home_score - away_score),
+            "predicted_winner": p.get("predicted_winner"),
+            "model_margin": p.get("model_margin"),
+            "win_prob": p.get("win_prob"),
+            #Moneyline: did we call the outright winner? Spread: did the side cover?
+            "ml_correct": bool(p.get("straight_up_correct")),
+            #Green (>=5) picks are the ones that count toward the tracked record;
+            #yellow (3-5) picks are shown here but held out of it.
+            "tier": "high" if (p.get("edge") or 0) >= RECOMMENDED_MIN_EDGE else "medium",
+            "counts_in_record": (p.get("edge") or 0) >= RECOMMENDED_MIN_EDGE,
+            "recommended_side": p.get("recommended_side"),
+            "recommended_team": (
+                p["home"] if p.get("recommended_side") == "home"
+                else p["away"] if p.get("recommended_side") == "away" else None
+            ),
+            "betting_spread": p.get("betting_spread"),
+            "ats_result": p.get("ats_result"),
+            "edge": p.get("edge"),
+        })
+    return results
+
+
 def get_track_record(db, sport=None, season=None):
     """Aggregate settled picks + weekly aggregate summaries into headline stats and a
     cumulative flat-bet profit series.
@@ -193,14 +258,14 @@ def get_track_record(db, sport=None, season=None):
     weekly_summaries and contribute one lump event to the totals/chart instead of one
     event per game.
     """
-    pick_query = db.collection("tracked_picks").where("status", "==", "final")
+    pick_query = db.collection("tracked_picks").where(filter=FieldFilter("status", "==", "final"))
     summary_query = db.collection("weekly_summaries")
     if sport:
-        pick_query = pick_query.where("sport", "==", sport)
-        summary_query = summary_query.where("sport", "==", sport)
+        pick_query = pick_query.where(filter=FieldFilter("sport", "==", sport))
+        summary_query = summary_query.where(filter=FieldFilter("sport", "==", sport))
     if season:
-        pick_query = pick_query.where("season", "==", season)
-        summary_query = summary_query.where("season", "==", season)
+        pick_query = pick_query.where(filter=FieldFilter("season", "==", season))
+        summary_query = summary_query.where(filter=FieldFilter("season", "==", season))
 
     events = [{"date": p["date"], "kind": "pick", "data": p} for p in (doc.to_dict() for doc in pick_query.stream())]
     events += [{"date": s["date"], "kind": "summary", "data": s} for s in (doc.to_dict() for doc in summary_query.stream())]
@@ -212,6 +277,9 @@ def get_track_record(db, sport=None, season=None):
     ats_losses = 0
     profit = 0.0
     profit_series = []
+    yellow_wins = 0
+    yellow_losses = 0
+    yellow_profit = 0.0
 
     for event in events:
         data = event["data"]
@@ -219,23 +287,34 @@ def get_track_record(db, sport=None, season=None):
             total += 1
             if data.get("straight_up_correct"):
                 straight_up_wins += 1
-            if data.get("recommended") and data.get("ats_result") in ("win", "loss"):
-                if data["ats_result"] == "win":
+            edge = data.get("edge") or 0
+            graded = data.get("recommended") and data.get("ats_result") in ("win", "loss")
+            won = data.get("ats_result") == "win"
+            if graded and edge >= RECOMMENDED_MIN_EDGE:
+                if won:
                     ats_wins += 1
                     profit += BET_TO_WIN
                 else:
                     ats_losses += 1
                     profit -= BET_STAKE
                 profit_series.append({"date": data["date"], "profit": round(profit, 2)})
+            elif graded and edge >= FLAGGED_MIN_EDGE:
+                if won:
+                    yellow_wins += 1
+                    yellow_profit += BET_TO_WIN
+                else:
+                    yellow_losses += 1
+                    yellow_profit -= BET_STAKE
         else:
+            #Weekly summaries are bottom-line totals with no per-game edge stored, so
+            #they can't be split by the RECOMMENDED_MIN_EDGE cut. They count toward
+            #games graded, but are left out of the recommended record and ROI rather
+            #than silently mixing 3-5 point picks into a >=5 point number.
             total += data["total_picks"]
             straight_up_wins += data["straight_up_wins"]
-            ats_wins += data["ats_wins"]
-            ats_losses += data["ats_losses"]
-            profit += data["ats_wins"] * BET_TO_WIN - data["ats_losses"] * BET_STAKE
-            profit_series.append({"date": data["date"], "profit": round(profit, 2)})
 
     ats_decided = ats_wins + ats_losses
+    yellow_decided = yellow_wins + yellow_losses
     return {
         "total_picks": total,
         "straight_up_win_pct": round(100 * straight_up_wins / total, 1) if total else None,
@@ -243,4 +322,10 @@ def get_track_record(db, sport=None, season=None):
         "ats_win_pct": round(100 * ats_wins / ats_decided, 1) if ats_decided else None,
         "profit_series": profit_series,
         "total_profit": round(profit, 2),
+        "roi_pct": round(100 * profit / (ats_decided * BET_STAKE), 1) if ats_decided else None,
+        #The 3-5 point tier, graded on its own and kept out of every number above.
+        "yellow_count": yellow_decided,
+        "yellow_ats_win_pct": round(100 * yellow_wins / yellow_decided, 1) if yellow_decided else None,
+        "yellow_profit": round(yellow_profit, 2),
+        "yellow_roi_pct": round(100 * yellow_profit / (yellow_decided * BET_STAKE), 1) if yellow_decided else None,
     }
