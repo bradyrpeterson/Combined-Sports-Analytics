@@ -160,12 +160,15 @@ try:
         basketball_teams = json.load(f)
     with open(os.path.join(basketball_dir, "conferences.json"), "r") as f:
         basketball_conferences = json.load(f)
+    with open(os.path.join(basketball_dir, "basketball_team_logos.json"), "r") as f:
+        basketball_logos = json.load(f)
     BASKETBALL_AVAILABLE = True
 except Exception as e:
     print(f"Basketball predictor not available: {e}")
     BASKETBALL_AVAILABLE = False
     basketball_teams = []
     basketball_conferences = []
+    basketball_logos = {}
 
 @app.route("/")
 def index():
@@ -253,8 +256,8 @@ def index():
             print("No featured pick found (no games with sufficient edge)")
         
         # Get top 5 rankings for preview
-        football_top5 = football_predictor.FBS_rankings.head(5).to_dict('records')
-        basketball_top5 = basketball_predictor.D1_rankings.head(5).to_dict('records')
+        football_top10 = football_predictor.FBS_rankings.head(10).to_dict('records')
+        basketball_top10 = basketball_predictor.D1_rankings.head(10).to_dict('records')
 
         # Real track record for the homepage (falls back to empty record until picks are settled)
         try:
@@ -278,8 +281,9 @@ def index():
                              recent_results=recent_results,
                              team_logos=football_logos,
                              featured_pick=featured_pick,
-                             football_top5=football_top5,
-                             basketball_top5=basketball_top5,
+                             football_top10=football_top10,
+                             basketball_top10=basketball_top10,
+                             basketball_logos=basketball_logos,
                              has_games=len(basketball_preds) > 0 or len(football_preds) > 0,
                              user_logged_in=user_logged_in,
                              user_email=user_email,
@@ -298,8 +302,9 @@ def index():
                              recent_results=[],
                              team_logos={},
                              featured_pick=None,
-                             football_top5=[],
-                             basketball_top5=[],
+                             football_top10=[],
+                             basketball_top10=[],
+                             basketball_logos={},
                              has_games=False,
                              user_logged_in=user_logged_in,
                              user_email=user_email,

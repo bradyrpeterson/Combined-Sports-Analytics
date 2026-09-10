@@ -306,63 +306,77 @@
             <div class="section-header">
                 <h2 class="section-title">Power Rankings</h2>
             </div>
-            <div class="rankings-preview-grid">
-                <div class="rankings-preview-card">
-                    <div class="preview-header">
-                        <h3>College Football Top 5</h3>
-                        <span class="preview-badge">Live Rankings</span>
-                    </div>
-                    <div class="preview-table">
-                        {% for team in football_top5 %}
-                        <div class="preview-row">
-                            <span class="preview-rank">{{ loop.index }}</span>
-                            <span class="preview-team">{{ team.team }}</span>
-                            <span class="preview-rating">{{ team.rating|round(1) }}</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% if not user_logged_in %}
-                    <div class="preview-overlay">
-                        <div class="preview-lock">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                            <p>Create a free account to see full rankings</p>
-                            <a href="/login" class="btn btn-small btn-primary">Unlock Rankings</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div class="rankings-preview-card">
-                    <div class="preview-header">
-                        <h3>College Basketball Top 5</h3>
-                        <span class="preview-badge">Live Rankings</span>
-                    </div>
-                    <div class="preview-table">
-                        {% for team in basketball_top5 %}
-                        <div class="preview-row">
-                            <span class="preview-rank">{{ loop.index }}</span>
-                            <span class="preview-team">{{ team.team }}</span>
-                            <span class="preview-rating">{{ team.rating|round(1) }}</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% if not user_logged_in %}
-                    <div class="preview-overlay">
-                        <div class="preview-lock">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                            <p>Create a free account to see full rankings</p>
-                            <a href="/login" class="btn btn-small btn-primary">Unlock Rankings</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
+            <div class="rank-tabs" role="tablist">
+                <button type="button" class="rank-tab active" data-sport="football" role="tab" aria-selected="true">College Football</button>
+                <button type="button" class="rank-tab" data-sport="basketball" role="tab" aria-selected="false">College Basketball</button>
             </div>
+
+            <div class="rank-panel" data-sport="football">
+                <div class="rank-board">
+                    <div class="rank-row rank-head">
+                        <span class="rank-num">#</span>
+                        <span class="rank-logo"></span>
+                        <span class="rank-team">Team</span>
+                        <span class="rank-rating">Rating</span>
+                    </div>
+                    {% for team in football_top10 %}
+                    <div class="rank-row">
+                        <span class="rank-num">{{ loop.index }}</span>
+                        {% if team_logos.get(team.team) %}<img src="{{ team_logos[team.team] }}" class="rank-logo" alt="">{% else %}<span class="rank-logo"></span>{% endif %}
+                        <span class="rank-team">{{ team.team }}</span>
+                        <span class="rank-rating">{{ team.rating|round(1) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if not user_logged_in %}
+                <div class="rank-unlock">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span>Create a free account to see full rankings</span>
+                    <a href="/login" class="btn btn-small btn-primary">Unlock Rankings</a>
+                </div>
+                {% else %}
+                <div class="rank-unlock">
+                    <a href="/rankings" class="btn btn-small btn-secondary">View Full Rankings</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="rank-panel" data-sport="basketball" hidden>
+                <div class="rank-board">
+                    <div class="rank-row rank-head">
+                        <span class="rank-num">#</span>
+                        <span class="rank-logo"></span>
+                        <span class="rank-team">Team</span>
+                        <span class="rank-rating">Rating</span>
+                    </div>
+                    {% for team in basketball_top10 %}
+                    <div class="rank-row">
+                        <span class="rank-num">{{ loop.index }}</span>
+                        {% if basketball_logos.get(team.team) %}<img src="{{ basketball_logos[team.team] }}" class="rank-logo" alt="">{% else %}<span class="rank-logo"></span>{% endif %}
+                        <span class="rank-team">{{ team.team }}</span>
+                        <span class="rank-rating">{{ team.rating|round(1) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if not user_logged_in %}
+                <div class="rank-unlock">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span>Create a free account to see full rankings</span>
+                    <a href="/login" class="btn btn-small btn-primary">Unlock Rankings</a>
+                </div>
+                {% else %}
+                <div class="rank-unlock">
+                    <a href="/rankings" class="btn btn-small btn-secondary">View Full Rankings</a>
+                </div>
+                {% endif %}
+            </div>
+
         </div>
     </section>
     <section class="model-explanation-section">
@@ -540,6 +554,20 @@
     </footer>
 
     <script>
+        document.querySelectorAll('.rank-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                var sport = tab.dataset.sport;
+                document.querySelectorAll('.rank-tab').forEach(function(t) {
+                    var on = t === tab;
+                    t.classList.toggle('active', on);
+                    t.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                document.querySelectorAll('.rank-panel').forEach(function(panel) {
+                    panel.hidden = panel.dataset.sport !== sport;
+                });
+            });
+        });
+
     // Set width for confidence bars
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.confidence-fill').forEach(function(el) {

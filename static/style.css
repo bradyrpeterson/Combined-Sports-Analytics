@@ -3439,3 +3439,127 @@ a {
 @media (prefers-reduced-motion: reduce) {
     .result-chevron, .result-card { transition: none; }
 }
+
+/* ============================================================
+   Section headings: accent blue across every section
+   ============================================================ */
+
+.section-title,
+.rankings-title,
+.pricing-title {
+    color: var(--accent-blue);
+}
+
+/* Footer column headings stay muted -- they're labels, not section headings. */
+.footer-section-title { color: var(--text-tertiary); }
+
+/* ============================================================
+   Power rankings: tabbed board with team logos
+   ============================================================ */
+
+.rank-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.rank-tab {
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.55rem 1.15rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.rank-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.rank-tab.active {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #04121f;
+    box-shadow: 0 0 20px rgba(77, 171, 247, 0.25);
+}
+.rank-tab:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+
+.rank-board {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.rank-row {
+    display: grid;
+    grid-template-columns: 2.2rem 28px 1fr auto;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.7rem 1.15rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-row:not(.rank-head):hover { background: rgba(255, 255, 255, 0.02); }
+
+.rank-head { background: rgba(255, 255, 255, 0.02); }
+.rank-head .rank-num,
+.rank-head .rank-team,
+.rank-head .rank-rating {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+}
+
+.rank-num {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.rank-logo { width: 28px; height: 28px; object-fit: contain; }
+
+.rank-team {
+    min-width: 0;
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rank-rating {
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.rank-unlock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+@media (max-width: 640px) {
+    .rank-row {
+        grid-template-columns: 1.8rem 24px 1fr auto;
+        gap: 0.6rem;
+        padding: 0.62rem 0.85rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rank-tab { transition: none; }
+}
