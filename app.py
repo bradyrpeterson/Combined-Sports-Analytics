@@ -512,96 +512,108 @@ def example():
                          user_email=user_email,
                          predictions=sample_predictions)
 
-@app.route("/football/custom")
+@app.route("/matchup")
 @login_required
+def matchup():
+    """Unified matchup predictor -- pick a sport, pick two teams, get a number.
+    Replaces the old /football/custom and /basketball/custom pages, which now
+    redirect here."""
+    refresh_predictors()
+
+    sports = {}
+    if FOOTBALL_AVAILABLE:
+        try:
+            fbs = set(football_predictor.fbs_teams)
+            sports["football"] = [
+                {"name": t,
+                 "logo": football_logos.get(t, ""),
+                 "color": football_colors.get(t, "")}
+                for t in sorted(football_predictor.ratings.index) if t in fbs
+            ]
+        except Exception as e:
+            print(f"Error building football matchup teams: {e}")
+    if BASKETBALL_AVAILABLE:
+        try:
+            d1 = set(basketball_predictor.d1_teams)
+            # team_color.json is football's file, but it is keyed by school, so a
+            # school that plays both sports gets its real color here. Schools with
+            # no football program fall back to the neutral chart colors.
+            sports["basketball"] = [
+                {"name": t,
+                 "logo": basketball_logos.get(t, ""),
+                 "color": football_colors.get(t, "")}
+                for t in sorted(basketball_predictor.ratings.index) if t in d1
+            ]
+        except Exception as e:
+            print(f"Error building basketball matchup teams: {e}")
+
+    requested = (request.args.get("sport") or "").lower()
+    if requested in sports:
+        default_sport = requested
+    elif sports:
+        default_sport = "football" if "football" in sports else next(iter(sports))
+    else:
+        default_sport = ""
+
+    return render_template("matchup.html", sports=sports, default_sport=default_sport)
+
+@app.route("/football/custom")
 def football_custom():
-    """Custom football matchup predictor (LOGIN REQUIRED)"""
-    try:
-        refresh_predictors()
-        fbs_teams = set(football_predictor.fbs_teams)
-        teams = sorted(t for t in football_predictor.ratings.index if t in fbs_teams)
-        return render_template('football_custom.html', teams=teams)
-    except Exception as e:
-        print(f"Error: {e}")
-        return render_template('football_custom.html', teams=[])
+    """Old football-only predictor; folded into the unified /matchup page."""
+    return redirect("/matchup?sport=football")
 
 @app.route("/basketball/custom")
-@login_required
 def basketball_custom():
-    """Custom basketball matchup predictor (LOGIN REQUIRED)"""
-    try:
-        refresh_predictors()
-        d1_teams = set(basketball_predictor.d1_teams)
-        teams = sorted(t for t in basketball_predictor.ratings.index if t in d1_teams)
-        return render_template('basketball_custom.html', teams=teams)
-    except Exception as e:
-        print(f"Error: {e}")
-        return render_template('basketball_custom.html', teams=[])
+    """Old basketball-only predictor; folded into the unified /matchup page."""
+    return redirect("/matchup?sport=basketball")
 
-@app.route("/api/predict/football", methods=["POST"])
+@app.route("/api/predict", methods=["POST"])
 @login_required
-def predict_football():
-    """API endpoint for custom football predictions"""
+def predict_matchup():
+    """Run one hypothetical game through whichever sport's model was asked for."""
+    data = request.json or {}
+    sport = (data.get("sport") or "").lower()
+    home = data.get("home")
+    away = data.get("away")
+    neutral = bool(data.get("neutral", False))
+
+    if sport == "football" and FOOTBALL_AVAILABLE:
+        model = football_predictor
+    elif sport == "basketball" and BASKETBALL_AVAILABLE:
+        model = basketball_predictor
+    else:
+        return jsonify({"success": False, "error": "That sport isn't available right now."}), 400
+
+    if not home or not away:
+        return jsonify({"success": False, "error": "Pick both teams."}), 400
+    if home == away:
+        return jsonify({"success": False, "error": "Pick two different teams."}), 400
+
     try:
-        data = request.json
-        home = data.get("home")
-        away = data.get("away")
-        neutral = data.get("neutral", False)
-        
-        if not home or not away:
-            return jsonify({"success": False, "error": "Missing teams"}), 400
-        
-        margin, prob = football_predictor.predict_game(home, away, neutral_site=neutral)
-        winner = home if margin > 0 else away
-        
-        # Ensure prob is percentage
-        if prob <= 1:
-            prob = prob * 100
-        
-        #Flip probability if away team won (prob is always for home team)
-        if winner == away:
-            prob = 100 - prob
-        
-        return jsonify({
-            "success": True,
-            "winner": winner,
-            "margin": round(abs(margin), 2),
-            "probability": round(prob, 1)
-        })
+        margin, prob = model.predict_game(home, away, neutral_site=neutral)
+    except KeyError as e:
+        return jsonify({"success": False,
+                        "error": f"No rating for {str(e).strip(chr(39))} yet."}), 400
+    except IndexError:
+        return jsonify({"success": False,
+                        "error": "One of those teams has no game data yet this season."}), 400
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-@app.route("/api/predict/basketball", methods=["POST"])
-@login_required
-def predict_basketball():
-    try:
-        data = request.json
-        home = data.get("home")
-        away = data.get("away")
-        neutral = data.get("neutral", False)
-        
-        if not home or not away:
-            return jsonify({"success": False, "error": "Missing teams"}), 400
-        
-        margin, prob = basketball_predictor.predict_game(home, away, neutral_site=neutral)
-        winner = home if margin > 0 else away
-        
-        # Ensure prob is percentage
-        if prob <= 1:
-            prob = prob * 100
-        
-        # Flip probability if away team won
-        if winner == away:
-            prob = 100 - prob
-        
-        return jsonify({
-            "success": True,
-            "winner": winner,
-            "margin": round(abs(margin), 2),
-            "probability": round(prob, 1)
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+    margin = float(margin)
+    prob = float(prob)
+    # predict_game returns the probability for the home team, sometimes as a
+    # fraction and sometimes already as a percentage.
+    if prob <= 1:
+        prob *= 100
+
+    return jsonify({
+        "success": True,
+        "winner": home if margin > 0 else away,
+        "margin": round(abs(margin), 1),
+        "home_prob": round(prob, 1),
+        "away_prob": round(100 - prob, 1),
+    })
 
 @app.route("/terms")
 def terms():

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <title>Matchup Predictor | Statalysts</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="season-info">2026 College Football Season</div>
+            <div class="top-nav-links">
+                <a href="/logout">Log Out</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="PetersonPredicts Logo" class="logo">
+                <a href="/" class="brand-name">Statalysts</a>
+            </div>
+            <nav class="main-nav">
+                <a href="/">Home</a>
+                <a href="/football">Football</a>
+                <a href="/basketball">Basketball<span class="beta-tag">Beta</span></a>
+                <a href="/matchup" class="active">Matchup</a>
+                <a href="/rankings">Rankings</a>
+                <a href="/example">Example</a>
+            </nav>
+            <div class="header-actions">
+                <a href="/manage-subscription" class="user-badge">Profile Information</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Matchup Predictor</h1>
+            <p class="page-subtitle">Predict any matchup using our model</p>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        {% if not sports %}
+        <div class="empty-state">
+            <div class="empty-title">Predictor unavailable</div>
+            <div class="empty-text">The models aren't loaded right now. Try again in a few minutes.</div>
+        </div>
+        {% else %}
+        <div class="mp-shell">
+            <div class="mp-sports" role="tablist" aria-label="Choose a sport">
+                {% if sports.football %}
+                <button type="button" class="mp-sport" data-sport="football" role="tab"
+                        aria-selected="{{ 'true' if default_sport == 'football' else 'false' }}">College Football</button>
+                {% endif %}
+                {% if sports.basketball %}
+                <button type="button" class="mp-sport" data-sport="basketball" role="tab"
+                        aria-selected="{{ 'true' if default_sport == 'basketball' else 'false' }}">College Basketball</button>
+                {% endif %}
+            </div>
+
+            <div class="mp-card">
+                <div class="mp-pickers">
+                    <div class="mp-picker" data-side="away">
+                        <span class="mp-label" id="mp-away-label">Away Team</span>
+                        <button type="button" class="mp-select" id="mp-away-btn"
+                                aria-haspopup="listbox" aria-expanded="false" aria-labelledby="mp-away-label mp-away-value">
+                            <span class="mp-select-logo" id="mp-away-logo"></span>
+                            <span class="mp-select-value mp-placeholder" id="mp-away-value">Select a team</span>
+                            <svg class="mp-caret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"
+                                      stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </button>
+                        <div class="mp-pop" id="mp-away-pop" hidden>
+                            <input type="text" class="mp-search" id="mp-away-search" placeholder="Search teams"
+                                   autocomplete="off" spellcheck="false" aria-label="Search away teams">
+                            <ul class="mp-list" id="mp-away-list" role="listbox" aria-label="Away team"></ul>
+                        </div>
+                    </div>
+
+                    <button type="button" class="mp-swap" id="mp-swap" aria-label="Swap home and away">
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                            <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l3 3m-3-3l-3 3" fill="none"
+                                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </button>
+
+                    <div class="mp-picker" data-side="home">
+                        <span class="mp-label" id="mp-home-label">Home Team</span>
+                        <button type="button" class="mp-select" id="mp-home-btn"
+                                aria-haspopup="listbox" aria-expanded="false" aria-labelledby="mp-home-label mp-home-value">
+                            <span class="mp-select-logo" id="mp-home-logo"></span>
+                            <span class="mp-select-value mp-placeholder" id="mp-home-value">Select a team</span>
+                            <svg class="mp-caret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"
+                                      stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </button>
+                        <div class="mp-pop" id="mp-home-pop" hidden>
+                            <input type="text" class="mp-search" id="mp-home-search" placeholder="Search teams"
+                                   autocomplete="off" spellcheck="false" aria-label="Search home teams">
+                            <ul class="mp-list" id="mp-home-list" role="listbox" aria-label="Home team"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mp-controls">
+                    <label class="mp-neutral">
+                        <input type="checkbox" id="mp-neutral">
+                        <span>Neutral site</span>
+                    </label>
+                    <button type="button" class="mp-run" id="mp-run">Generate Prediction</button>
+                </div>
+
+                <p class="mp-error" id="mp-error" hidden></p>
+            </div>
+
+            <div class="mp-result" id="mp-result" hidden>
+                <div class="mp-result-head">
+                    <div class="mp-result-team">
+                        <span class="mp-result-logo" id="mp-r-away-logo"></span>
+                        <span class="mp-result-name" id="mp-r-away-name"></span>
+                    </div>
+                    <span class="mp-result-at" id="mp-r-at">@</span>
+                    <div class="mp-result-team">
+                        <span class="mp-result-logo" id="mp-r-home-logo"></span>
+                        <span class="mp-result-name" id="mp-r-home-name"></span>
+                    </div>
+                </div>
+
+                <div class="mp-chart">
+                    <div class="mp-chart-side">
+                        <span class="mp-chart-logo" id="mp-c-away-logo"></span>
+                        <span class="mp-chart-pct" id="mp-c-away-pct"></span>
+                        <span class="mp-chart-name" id="mp-c-away-name"></span>
+                    </div>
+
+                    <svg class="mp-donut" viewBox="0 0 120 120" role="img" id="mp-donut" aria-label="Win probability">
+                        <circle cx="60" cy="60" r="45" fill="none" stroke="var(--bg-tertiary)" stroke-width="20"></circle>
+                        <circle cx="60" cy="60" r="45" fill="none" stroke-width="20" id="mp-arc-away"
+                                transform="rotate(-90 60 60)"></circle>
+                        <circle cx="60" cy="60" r="45" fill="none" stroke-width="20" id="mp-arc-home"
+                                transform="rotate(-90 60 60)"></circle>
+                        <text x="60" y="54" class="mp-donut-cap">WIN</text>
+                        <text x="60" y="70" class="mp-donut-cap">PROB</text>
+                    </svg>
+
+                    <div class="mp-chart-side">
+                        <span class="mp-chart-logo" id="mp-c-home-logo"></span>
+                        <span class="mp-chart-pct" id="mp-c-home-pct"></span>
+                        <span class="mp-chart-name" id="mp-c-home-name"></span>
+                    </div>
+                </div>
+
+                <div class="mp-stats">
+                    <div class="mp-stat">
+                        <span class="mp-stat-label">Projected Winner</span>
+                        <span class="mp-stat-value" id="mp-s-winner"></span>
+                    </div>
+                    <div class="mp-stat">
+                        <span class="mp-stat-label">Projected Margin</span>
+                        <span class="mp-stat-value" id="mp-s-margin"></span>
+                    </div>
+                    <div class="mp-stat">
+                        <span class="mp-stat-label">Win Probability</span>
+                        <span class="mp-stat-value" id="mp-s-prob"></span>
+                    </div>
+                </div>
+
+                <p class="mp-note" id="mp-note"></p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo-section">
+                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="footer-logo">
+                        <div class="footer-brand-name">Statalysts</div>
+                    </div>
+                    <p class="footer-description">
+                        Advanced AI-powered sports analytics and predictions for college football and basketball.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Product</h4>
+                    <div class="footer-links">
+                        <a href="/football">Football</a>
+                        <a href="/basketball">Basketball</a>
+                        <a href="/matchup">Matchup</a>
+                        <a href="/rankings">Rankings</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Company</h4>
+                    <div class="footer-links">
+                        <a href="/">Home</a>
+                        <a href="mailto:contact@statalysts.com">contact@statalysts.com</a>
+                        <a href="/terms">Terms &amp; Conditions</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-section-title">Account</h4>
+                    <div class="footer-links">
+                        <a href="/logout">Log Out</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>&copy; 2026 Statalysts. All rights reserved.</div>
+                <div class="footer-legal">
+                    <span>For entertainment purposes only</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    (function () {
+        const SPORTS = {{ sports|tojson }};
+        const NEUTRAL_COLORS = { away: '#5a6270', home: '#a8b2c8' };
+        const CIRC = 2 * Math.PI * 45;
+
+        let sport = {{ default_sport|tojson }};
+        const picked = { away: null, home: null };
+
+        const el = (id) => document.getElementById(id);
+        const teams = () => SPORTS[sport] || [];
+
+        function logoMarkup(team, cls) {
+            if (team && team.logo) {
+                const img = document.createElement('img');
+                img.src = team.logo;
+                img.alt = '';
+                img.className = cls;
+                return img;
+            }
+            const span = document.createElement('span');
+            span.className = cls;
+            return span;
+        }
+
+        function setLogo(slotId, team, cls) {
+            const node = logoMarkup(team, cls);
+            node.id = slotId;
+            el(slotId).replaceWith(node);
+        }
+
+        /* ---------- team pickers ---------- */
+
+        function renderList(side, filter) {
+            const list = el('mp-' + side + '-list');
+            const needle = (filter || '').trim().toLowerCase();
+            const other = side === 'away' ? picked.home : picked.away;
+            list.innerHTML = '';
+
+            const matches = teams().filter(function (t) {
+                return !needle || t.name.toLowerCase().includes(needle);
+            });
+
+            if (!matches.length) {
+                const li = document.createElement('li');
+                li.className = 'mp-option mp-option-empty';
+                li.textContent = 'No teams match';
+                list.appendChild(li);
+                return;
+            }
+
+            matches.forEach(function (team) {
+                const li = document.createElement('li');
+                li.className = 'mp-option';
+                li.setAttribute('role', 'option');
+                li.tabIndex = -1;
+                const isTaken = other && other.name === team.name;
+                const isSelected = picked[side] && picked[side].name === team.name;
+                li.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                if (isSelected) li.classList.add('selected');
+                if (isTaken) {
+                    li.classList.add('taken');
+                    li.setAttribute('aria-disabled', 'true');
+                }
+                li.appendChild(logoMarkup(team, 'mp-option-logo'));
+                const name = document.createElement('span');
+                name.className = 'mp-option-name';
+                name.textContent = team.name;
+                li.appendChild(name);
+                if (!isTaken) {
+                    li.addEventListener('click', function () { choose(side, team); });
+                }
+                list.appendChild(li);
+            });
+        }
+
+        function openPicker(side) {
+            closeAll(side);
+            const pop = el('mp-' + side + '-pop');
+            const search = el('mp-' + side + '-search');
+            pop.hidden = false;
+            el('mp-' + side + '-btn').setAttribute('aria-expanded', 'true');
+            search.value = '';
+            renderList(side, '');
+            search.focus();
+        }
+
+        function closePicker(side) {
+            el('mp-' + side + '-pop').hidden = true;
+            el('mp-' + side + '-btn').setAttribute('aria-expanded', 'false');
+        }
+
+        function closeAll(except) {
+            ['away', 'home'].forEach(function (s) { if (s !== except) closePicker(s); });
+        }
+
+        function choose(side, team) {
+            picked[side] = team;
+            const value = el('mp-' + side + '-value');
+            value.textContent = team.name;
+            value.classList.remove('mp-placeholder');
+            setLogo('mp-' + side + '-logo', team, 'mp-select-logo');
+            closePicker(side);
+            el('mp-' + side + '-btn').focus();
+            hideError();
+        }
+
+        function clearPick(side) {
+            picked[side] = null;
+            const value = el('mp-' + side + '-value');
+            value.textContent = 'Select a team';
+            value.classList.add('mp-placeholder');
+            setLogo('mp-' + side + '-logo', null, 'mp-select-logo');
+        }
+
+        ['away', 'home'].forEach(function (side) {
+            el('mp-' + side + '-btn').addEventListener('click', function () {
+                if (el('mp-' + side + '-pop').hidden) { openPicker(side); } else { closePicker(side); }
+            });
+            el('mp-' + side + '-search').addEventListener('input', function (e) {
+                renderList(side, e.target.value);
+            });
+            el('mp-' + side + '-search').addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    closePicker(side);
+                    el('mp-' + side + '-btn').focus();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const first = el('mp-' + side + '-list').querySelector('.mp-option:not(.taken):not(.mp-option-empty)');
+                    if (first) first.focus();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const first = el('mp-' + side + '-list').querySelector('.mp-option:not(.taken):not(.mp-option-empty)');
+                    if (first) first.click();
+                }
+            });
+            el('mp-' + side + '-list').addEventListener('keydown', function (e) {
+                const options = Array.prototype.slice.call(
+                    el('mp-' + side + '-list').querySelectorAll('.mp-option:not(.taken):not(.mp-option-empty)'));
+                const at = options.indexOf(document.activeElement);
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (options[at + 1]) options[at + 1].focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (at <= 0) { el('mp-' + side + '-search').focus(); } else { options[at - 1].focus(); }
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (document.activeElement.click) document.activeElement.click();
+                } else if (e.key === 'Escape') {
+                    closePicker(side);
+                    el('mp-' + side + '-btn').focus();
+                }
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.mp-picker')) closeAll();
+        });
+
+        /* ---------- sport switching ---------- */
+
+        const sportButtons = Array.prototype.slice.call(document.querySelectorAll('.mp-sport'));
+        sportButtons.forEach(function (btn) {
+            if (btn.dataset.sport === sport) btn.classList.add('active');
+            btn.addEventListener('click', function () {
+                if (btn.dataset.sport === sport) return;
+                sport = btn.dataset.sport;
+                sportButtons.forEach(function (b) {
+                    const on = b.dataset.sport === sport;
+                    b.classList.toggle('active', on);
+                    b.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                clearPick('away');
+                clearPick('home');
+                closeAll();
+                el('mp-result').hidden = true;
+                hideError();
+            });
+        });
+
+        el('mp-swap').addEventListener('click', function () {
+            const away = picked.away, home = picked.home;
+            clearPick('away'); clearPick('home');
+            if (home) choose('away', home);
+            if (away) choose('home', away);
+            closeAll();
+        });
+
+        /* ---------- prediction ---------- */
+
+        function showError(message) {
+            const box = el('mp-error');
+            box.textContent = message;
+            box.hidden = false;
+        }
+
+        function hideError() { el('mp-error').hidden = true; }
+
+        function colorFor(team, side) {
+            return (team && team.color) ? team.color : NEUTRAL_COLORS[side];
+        }
+
+        function render(data, neutral) {
+            const away = picked.away, home = picked.home;
+
+            setLogo('mp-r-away-logo', away, 'mp-result-logo');
+            setLogo('mp-r-home-logo', home, 'mp-result-logo');
+            el('mp-r-away-name').textContent = away.name;
+            el('mp-r-home-name').textContent = home.name;
+            el('mp-r-at').textContent = neutral ? 'vs' : '@';
+
+            setLogo('mp-c-away-logo', away, 'mp-chart-logo');
+            setLogo('mp-c-home-logo', home, 'mp-chart-logo');
+            el('mp-c-away-pct').textContent = data.away_prob.toFixed(1) + '%';
+            el('mp-c-home-pct').textContent = data.home_prob.toFixed(1) + '%';
+            el('mp-c-away-name').textContent = away.name;
+            el('mp-c-home-name').textContent = home.name;
+
+            const awayLen = CIRC * data.away_prob / 100;
+            const awayArc = el('mp-arc-away');
+            awayArc.setAttribute('stroke', colorFor(away, 'away'));
+            awayArc.setAttribute('stroke-dasharray', awayLen.toFixed(2) + ' ' + (CIRC - awayLen).toFixed(2));
+            const homeArc = el('mp-arc-home');
+            homeArc.setAttribute('stroke', colorFor(home, 'home'));
+            homeArc.setAttribute('stroke-dasharray', (CIRC - awayLen).toFixed(2) + ' ' + awayLen.toFixed(2));
+            homeArc.setAttribute('stroke-dashoffset', (-awayLen).toFixed(2));
+            el('mp-donut').setAttribute('aria-label',
+                away.name + ' ' + data.away_prob.toFixed(1) + ' percent, ' +
+                home.name + ' ' + data.home_prob.toFixed(1) + ' percent');
+
+            const winnerProb = data.winner === home.name ? data.home_prob : data.away_prob;
+            el('mp-s-winner').textContent = data.winner;
+            el('mp-s-margin').textContent = data.margin.toFixed(1) + ' pts';
+            el('mp-s-prob').textContent = winnerProb.toFixed(1) + '%';
+            el('mp-note').textContent = neutral
+                ? 'Neutral site — no home advantage applied.'
+                : home.name + ' is credited with home advantage.';
+
+            el('mp-result').hidden = false;
+        }
+
+        el('mp-run').addEventListener('click', async function () {
+            hideError();
+            if (!picked.away || !picked.home) { showError('Pick both teams.'); return; }
+            if (picked.away.name === picked.home.name) { showError('Pick two different teams.'); return; }
+
+            const button = el('mp-run');
+            const neutral = el('mp-neutral').checked;
+            button.disabled = true;
+            button.textContent = 'Generating...';
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sport: sport,
+                        home: picked.home.name,
+                        away: picked.away.name,
+                        neutral: neutral
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    render(data, neutral);
+                    el('mp-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    el('mp-result').hidden = true;
+                    showError(data.error || 'Prediction failed.');
+                }
+            } catch (err) {
+                el('mp-result').hidden = true;
+                showError('Network error. Please try again.');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Generate Prediction';
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
